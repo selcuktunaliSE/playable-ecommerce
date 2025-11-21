@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import { CartProvider } from "@/contexts/cart-context";
 
 export const metadata: Metadata = {
   title: "Playable E-commerce",
@@ -15,6 +16,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-slate-950 text-slate-100 min-h-screen">
+        <CartProvider>
+
         <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-2">
@@ -55,6 +58,7 @@ export default function RootLayout({
         <main className="max-w-6xl mx-auto px-4 py-8">
           {children}
         </main>
+         </CartProvider>
       </body>
     </html>
   );

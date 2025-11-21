@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { apiGet } from "@/lib/api";
+import { ProductAddToCart } from "@/components/ProductAddToCard";
 
 type ProductPageProps = {
   params: Promise<{ id: string }>;
@@ -121,14 +122,15 @@ export default async function ProductPage(props: ProductPageProps) {
           </div>
 
           <div className="pt-2">
-            <button
-              type="button"
-              className="w-full md:w-auto px-6 py-2.5 rounded-full bg-orange-500 text-sm font-semibold text-slate-950 hover:bg-orange-400 disabled:opacity-60 disabled:cursor-not-allowed transition"
-              disabled={product.stock <= 0}
-            >
-              {product.stock > 0 ? "Add to cart" : "Out of stock"}
-            </button>
+          <ProductAddToCart
+            productId={product._id}
+            name={product.name}
+            price={Number(product.price)}
+            image={product.images?.[0]}
+            stock={product.stock}
+            />
           </div>
+
 
           <div>
             <Link
