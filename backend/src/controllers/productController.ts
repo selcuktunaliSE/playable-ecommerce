@@ -33,7 +33,11 @@ export const getProducts = async (req: Request, res: Response) => {
       filters.rating = { $gte: Number(minRating) };
     }
 
-    if (categorySlug && typeof categorySlug === "string") {
+    if (
+      categorySlug &&
+      typeof categorySlug === "string" &&
+      categorySlug !== "all"
+    ) {
       const category = await Category.findOne({ slug: categorySlug }).lean();
       if (category) {
         filters.category = category._id;
@@ -77,6 +81,7 @@ export const getProducts = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 export const getProductById = async (req: Request, res: Response) => {
   try {
