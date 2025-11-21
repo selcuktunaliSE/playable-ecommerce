@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { useCart } from "@/contexts/cart-context";
+import { SearchBar } from "@/components/SearchBar";
 
 export function AppHeader() {
   const { totalQuantity } = useCart();
 
   return (
     <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-2">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
+        
+        <Link href="/" className="flex items-center gap-2 shrink-0">
           <div className="h-7 w-7 rounded-lg bg-orange-500 flex items-center justify-center text-xs font-bold text-slate-950">
             PF
           </div>
@@ -22,6 +24,10 @@ export function AppHeader() {
             </span>
           </div>
         </Link>
+
+        <div className="flex-1 hidden md:block">
+          <SearchBar />
+        </div>
 
         <nav className="flex items-center gap-4 text-sm">
           <Link
@@ -40,6 +46,10 @@ export function AppHeader() {
             </span>
           </Link>
         </nav>
+      </div>
+
+      <div className="md:hidden px-4 pb-3">
+        <SearchBar />
       </div>
     </header>
   );

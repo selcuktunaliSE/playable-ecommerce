@@ -3,10 +3,17 @@ import { apiGet } from "@/lib/api";
 
 type CategoryPageProps = {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ sort?: string }>;
+  searchParams?: Promise<{
+    sort?: string;
+    q?: string;
+  }>;
 };
 
-async function getCategoryPageData(slug: string, sort?: string) {
+async function getCategoryPageData(
+  slug: string,
+  sort?: string,
+  q?: string
+) {
   const categories = await apiGet("/categories");
 
   const category =
@@ -15,24 +22,47 @@ async function getCategoryPageData(slug: string, sort?: string) {
       : (categories as any[]).find((c) => c.slug === slug);
 
   const searchParams = new URLSearchParams();
+
+  if (slug !== "all") {
+    searchParams.set("categorySlug", slug);
+  } else {
+    searchParams.set("categorySlug", "all");
+  }
+
   if (sort) {
     searchParams.set("sort", sort);
   }
 
-  const query = searchParams.toString();
-  const products = await apiGet(
-    query ? `/products?${query}` : "/products"
-  );
+  if (q) {
+    searchParams.set("q", q);
+  }
 
-  return { category, products, sort, slug };
+  const query = searchParams.toString();
+  const products = await apiGet(`/products?${query}`);
+
+  return { category, products, sort, q };
 }
 
-export default async function CategoryPage(props: CategoryPageProps) {
-  const { slug } = await props.params;
-  const sp = props.searchParams ? await props.searchParams : undefined;
-  const sort = sp?.sort;
+export default async function CategoryPage({
+  params,
+  searchParams
+}: CategoryPageProps) {
+    
+  const { slug } = await params;
 
-  const { category, products } = await getCategoryPageData(slug, sort);
+  const sp = (searchParams ? await searchParams : {}) as {
+    sort?: string;
+    q?: string;
+  };
+
+  const sort = sp.sort;
+  const q = sp.q;
+
+  const { category, products } = await getCategoryPageData(
+    slug,
+    sort,
+    typeof q === "string" ? q : undefined
+  );
 
   const title =
     slug === "all"
@@ -53,6 +83,7 @@ export default async function CategoryPage(props: CategoryPageProps) {
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
             {title}
           </h1>
+
           {slug !== "all" && (
             <p className="text-sm text-slate-400 mt-1">
               Browse products under{" "}
@@ -61,9 +92,17 @@ export default async function CategoryPage(props: CategoryPageProps) {
               </span>
             </p>
           )}
+
           {slug === "all" && (
             <p className="text-sm text-slate-400 mt-1">
               All available products in the catalog.
+            </p>
+          )}
+
+          {q && (
+            <p className="text-xs text-slate-500 mt-1">
+              Showing results for{" "}
+              <span className="text-orange-300">"{q}"</span>
             </p>
           )}
         </div>
