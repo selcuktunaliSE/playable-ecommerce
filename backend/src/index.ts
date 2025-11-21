@@ -5,6 +5,8 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import morgan from "morgan";
 import mongoose from "mongoose";
+import categoryRoutes from "./routes/categories";
+import productRoutes from "./routes/products";
 
 import authRoutes from "./routes/auth";
 
@@ -29,6 +31,8 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/products", productRoutes);
 
 async function start() {
   try {
