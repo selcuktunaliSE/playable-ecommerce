@@ -10,7 +10,9 @@ export interface IProduct extends Document {
   category: Types.ObjectId;
   rating: number;
   numReviews: number;
+  isActive: boolean;
 }
+
 
 const productSchema = new Schema<IProduct>(
   {
@@ -26,10 +28,12 @@ const productSchema = new Schema<IProduct>(
       required: true
     },
     rating: { type: Number, default: 0 },
-    numReviews: { type: Number, default: 0 }
+    numReviews: { type: Number, default: 0 },
+    isActive: { type: Boolean, default: true }
   },
   { timestamps: true }
 );
+
 
 const Product = model<IProduct>("Product", productSchema);
 

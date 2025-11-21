@@ -17,6 +17,8 @@ export const getProducts = async (req: Request, res: Response) => {
 
     const filters: any = {};
 
+    filters.isActive = true;
+
     if (q && typeof q === "string") {
       filters.name = { $regex: q, $options: "i" };
     }
