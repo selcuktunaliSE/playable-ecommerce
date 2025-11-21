@@ -3,6 +3,8 @@ import Link from "next/link";
 import "./globals.css";
 import { CartProvider } from "@/contexts/cart-context";
 import { SearchBar } from "@/components/SearchBar";
+import { ToastProvider } from "@/contexts/toast-context";
+import { FloatingCartButton } from "@/components/FloatingCartButton";
 
 export const metadata: Metadata = {
   title: "Playable E-commerce",
@@ -18,6 +20,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="bg-slate-950 text-slate-100 min-h-screen">
         <CartProvider>
+          <ToastProvider>
           <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur">
             <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               {/* Logo */}
@@ -67,6 +70,8 @@ export default function RootLayout({
           <main className="max-w-6xl mx-auto px-4 py-8">
             {children}
           </main>
+          </ToastProvider>
+          <FloatingCartButton />
         </CartProvider>
       </body>
     </html>

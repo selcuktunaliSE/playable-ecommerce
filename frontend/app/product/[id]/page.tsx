@@ -16,12 +16,10 @@ export default async function ProductPage(props: ProductPageProps) {
 
   const product = await getProduct(id);
 
-  if (!product) {
+  if (!product || !product._id) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-slate-400">
-          Product not found.
-        </p>
+        <p className="text-sm text-slate-400">Product not found.</p>
         <Link
           href="/"
           className="text-sm text-orange-400 hover:text-orange-300 hover:underline"
@@ -32,9 +30,19 @@ export default async function ProductPage(props: ProductPageProps) {
     );
   }
 
-  const price = product.price?.toFixed
-    ? product.price.toFixed(2)
-    : Number(product.price).toFixed(2);
+  const rawPrice = product.price ?? 0;
+  const priceNumber =
+    typeof rawPrice === "number" ? rawPrice : Number(rawPrice);
+  const price = priceNumber.toFixed(2);
+
+  const rawRating = product.rating ?? 0;
+  const ratingNumber =
+    typeof rawRating === "number" ? rawRating : Number(rawRating);
+  const rating = ratingNumber.toFixed(1);
+
+  const rawStock = product.stock ?? 0;
+  const stock =
+    typeof rawStock === "number" ? rawStock : Number(rawStock);
 
   return (
     <div className="space-y-6">
@@ -54,10 +62,9 @@ export default async function ProductPage(props: ProductPageProps) {
           {product.category?.name ?? "Catalog"}
         </Link>
         <span className="mx-1">/</span>
-        <span className="text-slate-200">
-          {product.name}
-        </span>
+        <span className="text-slate-200">{product.name}</span>
       </nav>
+
       <section className="grid grid-cols-1 md:grid-cols-[1.3fr_1fr] gap-8">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-center">
           <div className="w-full max-w-md aspect-[4/3] bg-slate-800 rounded-xl overflow-hidden">
@@ -92,10 +99,7 @@ export default async function ProductPage(props: ProductPageProps) {
               ${price}
             </span>
             <span className="text-xs text-amber-400">
-              ⭐ {product.rating?.toFixed
-                ? product.rating.toFixed(1)
-                : Number(product.rating).toFixed(1)}{" "}
-              ({product.numReviews} reviews)
+              ⭐ {rating} ({product.numReviews ?? 0} reviews)
             </span>
           </div>
 
@@ -108,29 +112,24 @@ export default async function ProductPage(props: ProductPageProps) {
               Stock:{" "}
               <span
                 className={
-                  product.stock > 0
-                    ? "text-emerald-400"
-                    : "text-rose-400"
+                  stock > 0 ? "text-emerald-400" : "text-rose-400"
                 }
               >
-                {product.stock > 0
-                  ? `${product.stock} available`
-                  : "Out of stock"}
+                {stock > 0 ? `${stock} available` : "Out of stock"}
               </span>
             </p>
             <p>Product ID: {product._id}</p>
           </div>
 
           <div className="pt-2">
-          <ProductAddToCart
-            productId={product._id}
-            name={product.name}
-            price={Number(product.price)}
-            image={product.images?.[0]}
-            stock={product.stock}
+            <ProductAddToCart
+              productId={product._id}
+              name={product.name}
+              price={priceNumber}
+              image={product.images?.[0]}
+              stock={stock}
             />
           </div>
-
 
           <div>
             <Link

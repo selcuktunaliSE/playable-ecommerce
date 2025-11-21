@@ -1,19 +1,16 @@
 import Link from "next/link";
 import { apiGet } from "@/lib/api";
+import { ProductAddToCart } from "@/components/ProductAddToCard";
 
 type CategoryPageProps = {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{
+  searchParams: Promise<{
     sort?: string;
     q?: string;
   }>;
 };
 
-async function getCategoryPageData(
-  slug: string,
-  sort?: string,
-  q?: string
-) {
+async function getCategoryPageData(slug: string, sort?: string, q?: string) {
   const categories = await apiGet("/categories");
 
   const category =
@@ -22,17 +19,14 @@ async function getCategoryPageData(
       : (categories as any[]).find((c) => c.slug === slug);
 
   const searchParams = new URLSearchParams();
-
   if (slug !== "all") {
     searchParams.set("categorySlug", slug);
   } else {
     searchParams.set("categorySlug", "all");
   }
-
   if (sort) {
     searchParams.set("sort", sort);
   }
-
   if (q) {
     searchParams.set("q", q);
   }
@@ -47,21 +41,15 @@ export default async function CategoryPage({
   params,
   searchParams
 }: CategoryPageProps) {
-    
   const { slug } = await params;
-
-  const sp = (searchParams ? await searchParams : {}) as {
-    sort?: string;
-    q?: string;
-  };
-
-  const sort = sp.sort;
-  const q = sp.q;
+  const sp = await searchParams;
+  const sort = sp?.sort;
+  const q = sp?.q;
 
   const { category, products } = await getCategoryPageData(
     slug,
     sort,
-    typeof q === "string" ? q : undefined
+    q
   );
 
   const title =
@@ -83,7 +71,6 @@ export default async function CategoryPage({
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
             {title}
           </h1>
-
           {slug !== "all" && (
             <p className="text-sm text-slate-400 mt-1">
               Browse products under{" "}
@@ -92,17 +79,9 @@ export default async function CategoryPage({
               </span>
             </p>
           )}
-
           {slug === "all" && (
             <p className="text-sm text-slate-400 mt-1">
               All available products in the catalog.
-            </p>
-          )}
-
-          {q && (
-            <p className="text-xs text-slate-500 mt-1">
-              Showing results for{" "}
-              <span className="text-orange-300">"{q}"</span>
             </p>
           )}
         </div>
@@ -123,35 +102,65 @@ export default async function CategoryPage({
       ) : (
         <section>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {filteredItems.map((p: any) => (
-              <Link
-                key={p._id}
-                href={`/product/${p._id}`}
-                className="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-sm hover:border-orange-500/60 hover:shadow-md transition flex flex-col"
-              >
-                <div className="aspect-[4/3] bg-slate-800 rounded mb-3 overflow-hidden">
-                  <img
-                    src={
-                      p.images?.[0] ||
-                      "https://via.placeholder.com/400x300"
-                    }
-                    alt={p.name}
-                    className="w-full h-full object-cover"
-                  />
+            {filteredItems.map((p: any) => {
+              const rawPrice = p.price ?? 0;
+              const priceNumber =
+                typeof rawPrice === "number"
+                  ? rawPrice
+                  : Number(rawPrice);
+
+              const rawRating = p.rating ?? 0;
+              const ratingNumber =
+                typeof rawRating === "number"
+                  ? rawRating
+                  : Number(rawRating);
+
+              return (
+                <div
+                  key={p._id}
+                  className="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-sm hover:border-orange-500/60 hover:shadow-md transition flex flex-col"
+                >
+                  <Link
+                    href={`/product/${p._id}`}
+                    className="flex-1 flex flex-col"
+                  >
+                    <div className="aspect-[4/3] bg-slate-800 rounded mb-3 overflow-hidden">
+                      <img
+                        src={
+                          p.images?.[0] ||
+                          "https://via.placeholder.com/400x300"
+                        }
+                        alt={p.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 flex flex-col justify-between gap-1">
+                      <div className="text-sm font-semibold text-slate-50 line-clamp-2">
+                        {p.name}
+                      </div>
+                      <div className="text-sm text-slate-300">
+                        ${priceNumber.toFixed(2)}
+                      </div>
+                      <div className="text-xs text-amber-400 mt-1">
+                        ⭐ {ratingNumber.toFixed(1)} (
+                        {p.numReviews ?? 0} reviews)
+                      </div>
+                    </div>
+                  </Link>
+
+                  <div className="pt-3">
+                    <ProductAddToCart
+                    variant="card"
+                      productId={p._id}
+                      name={p.name}
+                      price={priceNumber}
+                      image={p.images?.[0]}
+                      stock={p.stock}
+                    />
+                  </div>
                 </div>
-                <div className="flex-1 flex flex-col justify-between gap-1">
-                  <div className="text-sm font-semibold text-slate-50 line-clamp-2">
-                    {p.name}
-                  </div>
-                  <div className="text-sm text-slate-300">
-                    ${p.price.toFixed(2)}
-                  </div>
-                  <div className="text-xs text-amber-400 mt-1">
-                    ⭐ {p.rating.toFixed(1)} ({p.numReviews} reviews)
-                  </div>
-                </div>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
