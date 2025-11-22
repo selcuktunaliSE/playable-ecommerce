@@ -10,7 +10,11 @@ type CategoryPageProps = {
   }>;
 };
 
-async function getCategoryPageData(slug: string, sort?: string, q?: string) {
+async function getCategoryPageData(
+  slug: string,
+  sort?: string,
+  q?: string
+) {
   const categories = await apiGet("/categories");
 
   const category =
@@ -19,14 +23,17 @@ async function getCategoryPageData(slug: string, sort?: string, q?: string) {
       : (categories as any[]).find((c) => c.slug === slug);
 
   const searchParams = new URLSearchParams();
+
   if (slug !== "all") {
     searchParams.set("categorySlug", slug);
   } else {
     searchParams.set("categorySlug", "all");
   }
+
   if (sort) {
     searchParams.set("sort", sort);
   }
+
   if (q) {
     searchParams.set("q", q);
   }
@@ -88,10 +95,34 @@ export default async function CategoryPage({
 
         <div className="flex items-center gap-2 text-xs md:text-sm">
           <span className="text-slate-400">Sort by:</span>
-          <SortLink slug={slug} label="Newest" value="newest" current={sort} />
-          <SortLink slug={slug} label="Price ↑" value="price-asc" current={sort} />
-          <SortLink slug={slug} label="Price ↓" value="price-desc" current={sort} />
-          <SortLink slug={slug} label="Rating" value="rating" current={sort} />
+          <SortLink
+            slug={slug}
+            label="Newest"
+            value="newest"
+            current={sort}
+            q={q}
+          />
+          <SortLink
+            slug={slug}
+            label="Price ↑"
+            value="price-asc"
+            current={sort}
+            q={q}
+          />
+          <SortLink
+            slug={slug}
+            label="Price ↓"
+            value="price-desc"
+            current={sort}
+            q={q}
+          />
+          <SortLink
+            slug={slug}
+            label="Rating"
+            value="rating"
+            current={sort}
+            q={q}
+          />
         </div>
       </section>
 
@@ -150,7 +181,7 @@ export default async function CategoryPage({
 
                   <div className="pt-3">
                     <ProductAddToCart
-                    variant="card"
+                      variant="card"
                       productId={p._id}
                       name={p.name}
                       price={priceNumber}
@@ -173,11 +204,19 @@ type SortLinkProps = {
   label: string;
   value: string;
   current?: string;
+  q?: string;
 };
 
-function SortLink({ slug, label, value, current }: SortLinkProps) {
+function SortLink({ slug, label, value, current, q }: SortLinkProps) {
   const isActive = current === value;
-  const href = `/category/${slug}?sort=${value}`;
+
+  const params = new URLSearchParams();
+  params.set("sort", value);
+  if (q) {
+    params.set("q", q);
+  }
+
+  const href = `/category/${slug}?${params.toString()}`;
 
   return (
     <Link
