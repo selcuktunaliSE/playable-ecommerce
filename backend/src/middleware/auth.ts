@@ -1,38 +1,49 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import User from "../models/user";
 
-export interface JwtPayload {
-  userId: string;
-  isAdmin: boolean;
-}
+const JWT_SECRET = process.env.JWT_SECRET || "changeme";
 
 export interface AuthRequest extends Request {
-  user?: JwtPayload;
+  userId?: string;
+  userRole?: "customer" | "admin";
 }
 
-export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const cookieToken = (req as any).cookies?.token;
-  const headerToken = req.headers.authorization?.startsWith("Bearer ")
-    ? req.headers.authorization.split(" ")[1]
-    : undefined;
+export const auth = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  const authHeader = req.headers.authorization;
 
-  const token = cookieToken || headerToken;
-
-  if (!token) {
-    return res.status(401).json({ message: "Not authenticated" });
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Authorization header missing" });
   }
 
+  const token = authHeader.substring(7);
+
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
-    req.user = decoded;
+    const payload = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const user = await User.findById(payload.userId);
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    req.userId = user.id;
+    req.userRole = user.role;
     next();
   } catch (err) {
-    return res.status(401).json({ message: "Invalid token" });
+    console.error("auth error", err);
+    return res.status(401).json({ message: "Invalid or expired token" });
   }
 };
 
-export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (!req.user?.isAdmin) {
+export const requireAdmin = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  if (req.userRole !== "admin") {
     return res.status(403).json({ message: "Admin only" });
   }
   next();
