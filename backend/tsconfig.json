@@ -9,5 +9,6 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
+  "types": ["node", "express"],
   "include": ["src"]
 }

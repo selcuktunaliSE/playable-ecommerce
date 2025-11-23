@@ -110,7 +110,7 @@ export function ProductAddToCart({
             `}
           >
             <span>🛒</span>
-            <span>{isOutOfStock ? "Out of stock" : "Add"}</span>
+            <span>{isOutOfStock ? "Out of stock" : "Add to cart"}</span>
           </button>
         </div>
       </div>
@@ -149,7 +149,7 @@ export function ProductAddToCart({
           cursor-pointer
           transition-transform transition-shadow duration-150
         "
-      >
+      > 
         {isOutOfStock ? "Out of stock" : "Add to cart"}
       </button>
     </div>

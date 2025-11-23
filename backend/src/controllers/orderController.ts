@@ -1,0 +1,235 @@
+import { Response } from "express";
+import { AuthRequest } from "../middleware/auth";
+import Product from "../models/product";
+import Order from "../models/order";
+
+export const createOrder = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+
+    const {
+      items,
+      shippingAddress,
+      paymentMethod,
+      paymentDetails
+    } = req.body as {
+      items: Array<{
+        productId?: string;
+        product?: string;
+        _id?: string;
+        quantity?: number;
+        name?: string;
+        image?: string;
+      }>;
+      shippingAddress: {
+        fullName: string;
+        addressLine1: string;
+        addressLine2?: string;
+        city: string;
+        postalCode: string;
+        country: string;
+      };
+      paymentMethod?: string;
+      paymentDetails?: {
+        cardName?: string;
+        cardNumber?: string;
+        expiry?: string;
+        cvc?: string;
+      };
+    };
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "Cart is empty" });
+    }
+
+    if (
+      !shippingAddress ||
+      !shippingAddress.fullName ||
+      !shippingAddress.addressLine1 ||
+      !shippingAddress.city ||
+      !shippingAddress.postalCode ||
+      !shippingAddress.country
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Shipping address is incomplete" });
+    }
+
+    const pm = paymentMethod ?? "card";
+    if (pm !== "card") {
+      return res
+        .status(400)
+        .json({ message: "Unsupported payment method in this demo" });
+    }
+
+    if (
+      !paymentDetails ||
+      !paymentDetails.cardName ||
+      !paymentDetails.cardNumber ||
+      !paymentDetails.expiry ||
+      !paymentDetails.cvc
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Payment details are incomplete" });
+    }
+
+    const sanitizedCardNumber = paymentDetails.cardNumber.replace(/\s+/g, "");
+
+    if (!/^\d{16}$/.test(sanitizedCardNumber)) {
+      return res.status(400).json({ message: "Invalid card number" });
+    }
+
+    if (!/^\d{3}$/.test(paymentDetails.cvc.trim())) {
+      return res.status(400).json({ message: "Invalid CVC" });
+    }
+
+    const expiryMatch = paymentDetails.expiry.match(/^(\d{2})\/(\d{2})$/);
+    if (!expiryMatch) {
+      return res.status(400).json({ message: "Invalid expiry date format" });
+    }
+    const month = Number(expiryMatch[1]);
+    if (month < 1 || month > 12) {
+      return res.status(400).json({ message: "Invalid expiry month" });
+    }
+
+    const productIds = items
+      .map(
+        (i) =>
+          i.productId ||
+          i.product ||
+          i._id
+      )
+      .filter(Boolean) as string[];
+
+    const products = await Product.find({
+      _id: { $in: productIds }
+    }).lean();
+
+    const productMap = new Map(
+      products.map((p: any) => [p._id.toString(), p])
+    );
+
+    const orderItems: any[] = [];
+    let totalAmount = 0;
+
+    for (const item of items) {
+      const productId =
+        (item.productId || item.product || item._id) as string;
+      const product = productMap.get(productId);
+
+      if (!product) continue;
+
+      const quantity = Number(item.quantity ?? 1);
+      const price = Number(product.price ?? 0);
+
+      orderItems.push({
+        product: product._id,
+        name: item.name || product.name,
+        price,
+        quantity,
+        image: item.image || product.images?.[0]
+      });
+
+      totalAmount += price * quantity;
+    }
+
+    if (orderItems.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "No valid products found in cart" });
+    }
+
+    for (const oi of orderItems) {
+      const p = productMap.get(oi.product.toString());
+      const currentStock = Number((p as any)?.stock ?? 0);
+
+      if (currentStock < oi.quantity) {
+        return res.status(400).json({
+          message: `Not enough stock for ${oi.name}. Available: ${currentStock}, requested: ${oi.quantity}`
+        });
+      }
+    }
+
+    for (const oi of orderItems) {
+      await Product.updateOne(
+        { _id: oi.product },
+        { $inc: { stock: -oi.quantity } }
+      );
+    }
+
+    const orderData: any = {
+      items: orderItems,
+      shippingAddress,
+      paymentStatus: "paid",
+      totalAmount,
+      paymentInfo: {
+        method: "card",
+        last4: sanitizedCardNumber.slice(-4)
+      }
+    };
+
+    if (userId) {
+      orderData.user = userId;
+    }
+
+    const order = await Order.create(orderData);
+
+    res.status(201).json(order);
+  } catch (err) {
+    console.error("createOrder error", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getMyOrders = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const orders = await Order.find({ user: userId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json(orders);
+  } catch (err) {
+    console.error("getMyOrders error", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getOrderById = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { id } = req.params;
+
+    const order = await Order.findById(id)
+      .populate("items.product")
+      .lean();
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (!userId && req.userRole !== "admin") {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+   
+    if (
+      order.user &&              
+      userId &&                 
+      order.user.toString() !== userId &&
+      req.userRole !== "admin"
+    ) {
+      return res.status(403).json({ message: "Not allowed" });
+    }
+
+    res.json(order);
+  } catch (err) {
+    console.error("getOrderById error", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+

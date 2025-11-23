@@ -80,7 +80,7 @@ export function AppHeader() {
 
               {isAdmin && (
                 <Link
-                  href="/admin"
+                  href="/admin/products"
                   className="text-slate-300 hover:text-orange-400 transition"
                 >
                   Admin

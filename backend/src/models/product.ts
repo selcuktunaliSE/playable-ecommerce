@@ -11,8 +11,8 @@ export interface IProduct extends Document {
   rating: number;
   numReviews: number;
   isActive: boolean;
+  salesCount:number
 }
-
 
 const productSchema = new Schema<IProduct>(
   {
@@ -27,6 +27,7 @@ const productSchema = new Schema<IProduct>(
       ref: "Category",
       required: true
     },
+    salesCount: { type: Number, default: 0 },
     rating: { type: Number, default: 0 },
     numReviews: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true }

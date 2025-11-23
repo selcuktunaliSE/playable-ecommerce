@@ -43,8 +43,36 @@ export const requireAdmin = (
   res: Response,
   next: NextFunction
 ) => {
+  console.log("requireAdmin userRole:",req.userRole)
   if (req.userRole !== "admin") {
     return res.status(403).json({ message: "Admin only" });
   }
   next();
+};
+
+export const optionalAuth = async (
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction
+) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return next();
+  }
+
+  const token = authHeader.substring(7);
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const user = await User.findById(payload.userId);
+    if (user) {
+      req.userId = user.id;
+      req.userRole = user.role;
+    }
+  } catch (err) {
+    console.warn("optionalAuth: invalid token, ignoring");
+  }
+
+  return next();
 };

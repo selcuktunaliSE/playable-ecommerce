@@ -2,18 +2,44 @@ import Link from "next/link";
 import { apiGet } from "@/lib/api";
 import { ProductAddToCart } from "@/components/ProductAddToCard";
 
-async function getHomePageData() {
-  const categories = await apiGet("/categories");
-  const topRated = await apiGet("/products?sort=rating&limit=4");
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
-  return { categories, topRated };
+function resolveImageUrl(raw?: string): string {
+  if (!raw) {
+    return "https://via.placeholder.com/400x300?text=No+Image";
+  }
+
+  if (raw.startsWith("http://") || raw.startsWith("https://")) {
+    return raw;
+  }
+
+  if (API_BASE_URL) {
+    return `${API_BASE_URL}${raw.startsWith("/") ? raw : `/${raw}`}`;
+  }
+
+  return raw;
 }
 
-export default async function HomePage() {
-  const { categories, topRated } = await getHomePageData();
+async function getHomePageData() {
+  const categories = await apiGet("/categories");
+  const topRatedRes = await apiGet("/products?sort=rating&limit=4");
+  const bestSellersRes = await apiGet("/products?sort=sales&limit=4");
 
   const categoryItems = (categories as any[]) ?? [];
-  const topItems = (topRated as any).items ?? (topRated as any[]) ?? [];
+
+  const topItems =
+    (topRatedRes as any).items ?? ((topRatedRes as any[]) ?? []);
+
+  const bestSellerItems =
+    (bestSellersRes as any).items ??
+    ((bestSellersRes as any[]) ?? []);
+
+  return { categoryItems, topItems, bestSellerItems };
+}
+
+  export default async function HomePage() {
+  const { categoryItems, topItems, bestSellerItems } =
+  await getHomePageData();
 
   return (
     <div className="space-y-10">
@@ -86,48 +112,123 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          {topItems.map((p: any) => (
-            <div
-              key={p._id}
-              className="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-sm flex flex-col"
-            >
-              <Link
-                href={`/product/${p._id}`}
-                className="flex-1 flex flex-col gap-2"
+          {topItems.map((p: any) => {
+            const firstImage = Array.isArray(p.images)
+              ? p.images[0]
+              : undefined;
+            const imageSrc = resolveImageUrl(firstImage);
+
+            const rating =
+              p.rating != null ? Number(p.rating).toFixed(1) : "0.0";
+            const numReviews = p.numReviews ?? 0;
+
+            return (
+              <div
+                key={p._id}
+                className="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-sm flex flex-col"
               >
-                <div className="aspect-[4/3] bg-slate-800 rounded mb-3 overflow-hidden">
-                  <img
-                    src={
-                      p.images?.[0] ||
-                      "https://via.placeholder.com/400x300"
-                    }
-                    alt={p.name}
-                    className="w-full h-full object-cover"
+                <Link
+                  href={`/product/${p._id}`}
+                  className="flex-1 flex flex-col gap-2"
+                >
+                  <div className="aspect-[4/3] bg-slate-800 rounded mb-3 overflow-hidden">
+                    <img
+                      src={imageSrc}
+                      alt={p.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="text-sm font-semibold text-slate-50 line-clamp-2">
+                    {p.name}
+                  </div>
+                  <div className="text-sm text-slate-300">
+                    ${Number(p.price).toFixed(2)}
+                  </div>
+                  <div className="text-xs text-amber-400 mt-1">
+                    ⭐ {rating} ({numReviews} reviews)
+                  </div>
+                </Link>
+
+                <div className="mt-3">
+                  <ProductAddToCart
+                    variant="card"
+                    productId={p._id}
+                    name={p.name}
+                    price={Number(p.price)}
+                    image={imageSrc}
+                    stock={p.stock}
                   />
                 </div>
-                <div className="text-sm font-semibold text-slate-50 line-clamp-2">
-                  {p.name}
-                </div>
-                <div className="text-sm text-slate-300">
-                  ${Number(p.price).toFixed(2)}
-                </div>
-                <div className="text-xs text-amber-400 mt-1">
-                  ⭐ {Number(p.rating).toFixed(1)} ({p.numReviews} reviews)
-                </div>
-              </Link>
-
-              <div className="mt-3">
-                <ProductAddToCart
-                  variant="card"
-                  productId={p._id}
-                  name={p.name}
-                  price={Number(p.price)}
-                  image={p.images?.[0]}
-                  stock={p.stock}
-                />
               </div>
-            </div>
-          ))}
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-xl md:text-2xl font-semibold">
+            Best Sellers
+          </h2>
+          <Link
+            href="/category/all"
+            className="text-xs md:text-sm text-orange-400 hover:text-orange-300 hover:underline"
+          >
+            View all products
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          {bestSellerItems.map((p: any) => {
+            const firstImage = Array.isArray(p.images)
+              ? p.images[0]
+              : undefined;
+            const imageSrc = resolveImageUrl(firstImage);
+
+            const rating =
+              p.rating != null ? Number(p.rating).toFixed(1) : "0.0";
+            const numReviews = p.numReviews ?? 0;
+
+            return (
+              <div
+                key={p._id}
+                className="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-sm flex flex-col"
+              >
+                <Link
+                  href={`/product/${p._id}`}
+                  className="flex-1 flex flex-col gap-2"
+                >
+                  <div className="aspect-[4/3] bg-slate-800 rounded mb-3 overflow-hidden">
+                    <img
+                      src={imageSrc}
+                      alt={p.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="text-sm font-semibold text-slate-50 line-clamp-2">
+                    {p.name}
+                  </div>
+                  <div className="text-sm text-slate-300">
+                    ${Number(p.price).toFixed(2)}
+                  </div>
+                  <div className="text-xs text-amber-400 mt-1">
+                    ⭐ {rating} ({numReviews} reviews)
+                  </div>
+                </Link>
+
+                <div className="mt-3">
+                  <ProductAddToCart
+                    variant="card"
+                    productId={p._id}
+                    name={p.name}
+                    price={Number(p.price)}
+                    image={imageSrc}
+                    stock={p.stock}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
     </div>

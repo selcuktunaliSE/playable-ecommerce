@@ -2,6 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/user";
+import Order from "../models/order";
 import { auth, AuthRequest } from "../middleware/auth";
 
 const router = Router();
@@ -109,11 +110,16 @@ router.get("/profile", auth, async (req: AuthRequest, res) => {
 
 router.get("/profile/orders", auth, async (req: AuthRequest, res) => {
   try {
-    res.json([]);
+    const orders = await Order.find({ user: req.userId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json(orders);
   } catch (err) {
     console.error("profile orders error", err);
-    res.status(500).json({ message: "Server error",err });
+    res.status(500).json({ message: "Server error" });
   }
 });
+
 
 export default router;

@@ -1,28 +1,22 @@
 import { Router } from "express";
-import Product from "../models/product";
-import { requireAdmin } from "../middleware/auth";
+import {
+  getAdminProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  bulkUpdateProductStatus
+} from "../controllers/adminProductController";
+import { auth, requireAdmin } from "../middleware/auth";
 
 const router = Router();
 
-router.delete("/:id", requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
+router.use(auth);
+router.use(requireAdmin);
 
-    const product = await Product.findByIdAndUpdate(
-      id,
-      { isActive: false },
-      { new: true }
-    );
-
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-
-    res.json({ message: "Product deactivated", product });
-  } catch (err) {
-    console.error("soft delete product error", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
+router.get("/", getAdminProducts);
+router.post("/", createProduct);
+router.put("/:id", updateProduct);
+router.delete("/:id", deleteProduct);
+router.post("/bulk-status", bulkUpdateProductStatus);
 
 export default router;

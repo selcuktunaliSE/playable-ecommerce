@@ -8,7 +8,10 @@ import mongoose from "mongoose";
 import categoryRoutes from "./routes/categories";
 import productRoutes from "./routes/products";
 import adminProductRoutes from "./routes/adminProducts";
-
+import orderRoutes from "./routes/orders"
+import adminCategoryRoutes from "./routes/adminCategory";
+import adminUploadRoutes from "./routes/adminUpload";
+import path from "path";
 
 import authRoutes from "./routes/auth";
 
@@ -17,7 +20,12 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(helmet());
+app.use(
+  "/uploads",
+  helmet.crossOriginResourcePolicy({ policy: "cross-origin" }),
+  express.static(path.join(__dirname, "../uploads"))
+);
+
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(cookieParser());
@@ -27,7 +35,10 @@ app.use(
     credentials: true
   })
 );
-
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "..", "uploads"))
+);
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
@@ -35,8 +46,10 @@ app.get("/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/products", productRoutes);
-app.use("/api/products",adminProductRoutes)
-
+app.use("/api/admin/products",adminProductRoutes)
+app.use("/api/orders", orderRoutes);
+app.use("/api/admin/categories",adminCategoryRoutes)
+app.use("/api/admin/upload", adminUploadRoutes);
 async function start() {
   try {
     const uri = process.env.MONGODB_URI as string;

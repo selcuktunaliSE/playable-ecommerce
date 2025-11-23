@@ -16,8 +16,8 @@ export const getProducts = async (req: Request, res: Response) => {
     } = req.query;
 
     const filters: any = {};
-
     filters.isActive = true;
+    filters.stock = { $gt: 0 };
 
     if (q && typeof q === "string") {
       filters.name = { $regex: q, $options: "i" };
@@ -51,11 +51,13 @@ export const getProducts = async (req: Request, res: Response) => {
       }
     }
 
+    // Sort
     const sortObj: any = {};
     if (sort === "price-asc") sortObj.price = 1;
     if (sort === "price-desc") sortObj.price = -1;
     if (sort === "rating") sortObj.rating = -1;
     if (sort === "newest") sortObj.createdAt = -1;
+    if (sort === "sales") sortObj.salesCount = -1;
 
     const pageNum = Number(page);
     const limitNum = Number(limit);
@@ -82,7 +84,6 @@ export const getProducts = async (req: Request, res: Response) => {
   }
 };
 
-
 export const getProductById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -92,9 +93,14 @@ export const getProductById = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
+    if (!product.isActive || (product.stock ?? 0) <= 0) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
     res.json(product);
   } catch (err) {
     console.error("getProductById error", err);
     res.status(500).json({ message: "Server error" });
   }
 };
+
