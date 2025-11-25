@@ -51,7 +51,6 @@ export const getProducts = async (req: Request, res: Response) => {
       }
     }
 
-    // Sort
     const sortObj: any = {};
     if (sort === "price-asc") sortObj.price = 1;
     if (sort === "price-desc") sortObj.price = -1;

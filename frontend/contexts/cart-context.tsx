@@ -8,6 +8,8 @@ import {
   ReactNode
 } from "react";
 
+import { useAuth } from "@/contexts/auth-context";
+
 export type CartItem = {
   productId: string;
   name: string;
@@ -32,6 +34,7 @@ const STORAGE_KEY = "playable_cart_v1";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const { user } = useAuth();
 
   useEffect(() => {
     try {
@@ -56,6 +59,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
       console.warn("Failed to save cart to storage", err);
     }
   }, [items]);
+
+    useEffect(() => {
+    if (!user) {
+      setItems([]);
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem(STORAGE_KEY);
+        }
+      } catch (err) {
+        console.warn("Failed to clear cart on logout", err);
+      }
+    }
+  }, [user]);
+
 
   const addItem = (
     item: Omit<CartItem, "quantity">,

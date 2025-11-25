@@ -5,9 +5,23 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { useCart } from "@/contexts/cart-context";
 
+const STORAGE_KEY = "playable_ecommerce_auth";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+
+function formatCardNumber(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 16);
+  return digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+}
+
+function formatExpiry(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}
+
 export default function CheckoutPage() {
-  const router = useRouter();
   const { user, token } = useAuth();
+  const router = useRouter();
 
   const cart = useCart() as any;
   const items = cart.items ?? cart.cartItems ?? [];
@@ -26,14 +40,18 @@ export default function CheckoutPage() {
   const [addressLine2, setAddressLine2] = useState("");
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
-  const [country, setCountry] = useState("Turkey");
+  const [country, setCountry] = useState("Turkiye");
+
+  const [cardName, setCardName] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvc, setCvc] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-
-    const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
@@ -43,40 +61,109 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!API_BASE_URL) {
+      setError("API base URL is not configured.");
+      return;
+    }
+
+    if (!fullName || !addressLine1 || !city || !postalCode || !country) {
+      setError("Please fill in all required address fields.");
+      return;
+    }
+
+    const cardDigits = cardNumber.replace(/\s+/g, "");
+    if (!/^\d{16}$/.test(cardDigits)) {
+      setError("Please enter a valid 16-digit card number.");
+      return;
+    }
+
+    if (!/^\d{3}$/.test(cvc)) {
+      setError("Please enter a valid 3-digit CVC.");
+      return;
+    }
+
+    if (!/^\d{2}\/\d{2}$/.test(expiry)) {
+      setError("Please enter a valid expiry date (MM/YY).");
+      return;
+    }
+    const [mmStr] = expiry.split("/");
+    const mm = Number(mmStr);
+    if (mm < 1 || mm > 12) {
+      setError("Expiry month must be between 01 and 12.");
+      return;
+    }
+
+    if (!cardName) {
+      setError("Please enter the name on card.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const headers: HeadersInit = {
+      let authToken: string | undefined = token || undefined;
+      let bodyUserId: string | undefined =
+        (user as any)?.id ?? (user as any)?._id ?? undefined;
+
+      if ((!authToken || !bodyUserId) && typeof window !== "undefined") {
+        try {
+          const stored = window.localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored) as {
+              user?: { id?: string; _id?: string };
+              token?: string;
+            };
+
+            if (!authToken && parsed.token) {
+              authToken = parsed.token;
+            }
+
+            if (!bodyUserId && parsed.user) {
+              bodyUserId = parsed.user.id ?? parsed.user._id;
+            }
+          }
+        } catch {
+          
+        }
+      }
+      
+      const headers: Record<string, string> = {
         "Content-Type": "application/json"
       };
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`;
       }
 
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/orders`,
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            items: items.map((item: any) => ({
-              productId:
-                item.productId ?? item.id ?? item._id,
-              quantity: item.quantity ?? 1,
-              name: item.name,
-              image: item.image
-            })),
-            shippingAddress: {
-              fullName,
-              addressLine1,
-              addressLine2,
-              city,
-              postalCode,
-              country
-            }
-          })
-        }
-      );
+      console.log("CHECKOUT final headers:", headers);
+
+      const res = await fetch(`${API_BASE_URL}/orders`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          userId: bodyUserId,
+          items: items.map((item: any) => ({
+            productId: item.productId ?? item.id ?? item._id,
+            quantity: item.quantity ?? 1,
+            name: item.name,
+            image: item.image
+          })),
+          shippingAddress: {
+            fullName,
+            addressLine1,
+            addressLine2,
+            city,
+            postalCode,
+            country
+          },
+          paymentMethod: "card",
+          paymentDetails: {
+            cardName,
+            cardNumber,
+            expiry,
+            cvc
+          }
+        })
+      });
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
@@ -84,21 +171,23 @@ export default function CheckoutPage() {
       }
 
       const order = await res.json();
+      console.log("ORDER CREATED:", order);
+
       clearCart();
       setSuccess("Your order has been placed successfully.");
 
-      if (user) {
+      if (bodyUserId) {
         router.push("/profile");
       } else {
         router.push("/");
       }
     } catch (err: any) {
+      console.error("Order error:", err);
       setError(err?.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="max-w-4xl mx-auto py-8 space-y-8">
@@ -138,7 +227,9 @@ export default function CheckoutPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs text-slate-300">Address line 2 (optional)</label>
+            <label className="text-xs text-slate-300">
+              Address line 2 (optional)
+            </label>
             <input
               type="text"
               value={addressLine2}
@@ -179,6 +270,83 @@ export default function CheckoutPage() {
                 onChange={(e) => setCountry(e.target.value)}
                 className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-400"
               />
+            </div>
+          </div>
+
+          <div className="pt-3 mt-3 border-t border-slate-800 space-y-2">
+            <h3 className="text-sm font-semibold text-slate-200">
+              Payment details
+            </h3>
+
+            <div className="space-y-1">
+              <label className="text-xs text-slate-300">
+                Name on card
+              </label>
+              <input
+                type="text"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                value={cardName}
+                onChange={(e) => setCardName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-slate-300">
+                Card number
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="cc-number"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                placeholder="1234 5678 9012 3456"
+                value={cardNumber}
+                onChange={(e) =>
+                  setCardNumber(formatCardNumber(e.target.value))
+                }
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300">
+                  Expiry (MM/YY)
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="cc-exp"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  placeholder="12/28"
+                  value={expiry}
+                  onChange={(e) =>
+                    setExpiry(formatExpiry(e.target.value))
+                  }
+                  maxLength={5}
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300">
+                  CVC
+                </label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="cc-csc"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  placeholder="123"
+                  value={cvc}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, "").slice(0, 3);
+                    setCvc(digits);
+                  }}
+                  maxLength={3}
+                  required
+                />
+              </div>
             </div>
           </div>
 
@@ -232,9 +400,8 @@ export default function CheckoutPage() {
           </div>
 
           <p className="text-[11px] text-slate-500">
-            Payment is processed as a dummy service in this case study.
-            Your order will be marked as <span className="text-emerald-400">paid</span>{" "}
-            automatically.
+            This is a demo checkout – a valid-looking card number will simulate a
+            successful payment.
           </p>
         </aside>
       </div>

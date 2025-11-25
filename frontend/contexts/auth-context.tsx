@@ -18,6 +18,7 @@ type User = {
 type AuthContextType = {
   user: User | null;
   token: string | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -30,21 +31,22 @@ const STORAGE_KEY = "playable_ecommerce_auth";
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    window.localStorage.removeItem("auth");
-
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (!stored) return;
-
     try {
-      const parsed = JSON.parse(stored) as { user: User; token: string };
-      setUser(parsed.user);
-      setToken(parsed.token);
+      const stored = window.localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as { user: User; token: string };
+        setUser(parsed.user);
+        setToken(parsed.token);
+      }
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -67,7 +69,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
+        credentials: "include"
       }
     );
 
@@ -87,7 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password })
+        body: JSON.stringify({ name, email, password }),
+        credentials: "include"
       }
     );
 
@@ -104,11 +108,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     setToken(null);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, token, login, register, logout }}
+      value={{ user, token, loading, login, register, logout }}
     >
       {children}
     </AuthContext.Provider>

@@ -5,7 +5,8 @@ import Order from "../models/order";
 
 export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId;
+    const bodyUserId = (req.body as any).userId;
+    const userId = req.userId || bodyUserId;
 
     const {
       items,
@@ -171,11 +172,23 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
     if (userId) {
       orderData.user = userId;
+      console.log("createOrder attaching user to order:", userId);
+    } 
+    else {
+    console.log("createOrder: NO userId, saving as guest order");
+    }
+    
+    for (const oi of orderItems) {
+    await Product.updateOne(
+    { _id: oi.product },
+      { $inc: { salesCount: oi.quantity } }
+    );
     }
 
     const order = await Order.create(orderData);
-
+    console.log("createOrder DONE. Saved order id:", order._id);
     res.status(201).json(order);
+    
   } catch (err) {
     console.error("createOrder error", err);
     res.status(500).json({ message: "Server error" });

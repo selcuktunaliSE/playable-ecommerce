@@ -10,8 +10,7 @@ import { auth, requireAdmin } from "../middleware/auth";
 
 const router = Router();
 
-router.use(auth);
-router.use(requireAdmin);
+router.use(auth,requireAdmin);
 
 router.get("/", getAdminProducts);
 router.post("/", createProduct);

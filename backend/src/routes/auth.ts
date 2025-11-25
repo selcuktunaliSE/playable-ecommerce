@@ -97,7 +97,7 @@ router.get("/profile", auth, async (req: AuthRequest, res) => {
     }
 
     res.json({
-      id: user._id,
+      id: user.id,
       name: user.name,
       email: user.email,
       role: user.role

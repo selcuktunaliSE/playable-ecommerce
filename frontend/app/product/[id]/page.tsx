@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { apiGet } from "@/lib/api";
 import { ProductAddToCart } from "@/components/ProductAddToCard";
+import { ProductImageGallery } from "@/components/ProductImageGallery";
 
 type ProductPageProps = {
   params: Promise<{ id: string }>;
@@ -44,6 +45,15 @@ export default async function ProductPage(props: ProductPageProps) {
   const stock =
     typeof rawStock === "number" ? rawStock : Number(rawStock);
 
+  const images: string[] = Array.isArray(product.images)
+    ? product.images
+    : product.image
+    ? [product.image]
+    : [];
+
+  const mainImage =
+    images[0] ?? "https://via.placeholder.com/800x600";
+
   return (
     <div className="space-y-6">
       <nav className="text-xs text-slate-400">
@@ -66,19 +76,10 @@ export default async function ProductPage(props: ProductPageProps) {
       </nav>
 
       <section className="grid grid-cols-1 md:grid-cols-[1.3fr_1fr] gap-8">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-center">
-          <div className="w-full max-w-md aspect-[4/3] bg-slate-800 rounded-xl overflow-hidden">
-            <img
-              src={
-                product.images?.[0] ||
-                "https://via.placeholder.com/800x600"
-              }
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </div>
+        {/* Sol taraf: resim galerisi */}
+        <ProductImageGallery images={images} name={product.name} />
 
+        {/* Sağ taraf: ürün bilgisi */}
         <div className="space-y-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-50">
@@ -126,7 +127,7 @@ export default async function ProductPage(props: ProductPageProps) {
               productId={product._id}
               name={product.name}
               price={priceNumber}
-              image={product.images?.[0]}
+              image={mainImage}
               stock={stock}
             />
           </div>

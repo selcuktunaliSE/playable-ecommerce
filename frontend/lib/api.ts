@@ -1,7 +1,7 @@
 const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 if (!API_URL) {
-  throw new Error("NEXT_PUBLIC_API_URL is not set");
+  throw new Error("NEXT_PUBLIC_API_BASE_URL is not set");
 }
 
 export async function apiGet(path: string, options: RequestInit = {}) {

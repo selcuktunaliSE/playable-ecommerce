@@ -47,8 +47,8 @@ export function AppHeader() {
           >
             Home
           </Link>
-
-          <Link
+          {!isAdmin && (
+               <Link
             href="/cart"
             className="text-slate-300 hover:text-orange-400 transition flex items-center gap-1"
           >
@@ -59,6 +59,8 @@ export function AppHeader() {
               </span>
             )}
           </Link>
+          )}
+       
 
           {!isLoggedIn && (
             <Link
@@ -77,13 +79,20 @@ export function AppHeader() {
               >
                 Profile
               </Link>
-
+              {isAdmin && (
+               <Link
+                  href="/admin"
+                  className="text-slate-300 hover:text-orange-400 transition"
+                >
+                  Dashboard
+                </Link>
+              )}
               {isAdmin && (
                 <Link
                   href="/admin/products"
                   className="text-slate-300 hover:text-orange-400 transition"
                 >
-                  Admin
+                  Panel
                 </Link>
               )}
 

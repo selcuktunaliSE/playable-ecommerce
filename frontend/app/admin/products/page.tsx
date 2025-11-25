@@ -29,7 +29,7 @@ type FormState = {
   price: string;
   stock: string;
   categoryId: string;
-  imageUrl: string;
+  images: string[];      
   isActive: boolean;
 };
 
@@ -38,18 +38,17 @@ const emptyForm: FormState = {
   price: "",
   stock: "",
   categoryId: "",
-  imageUrl: "",
+  images: [],
   isActive: true
 };
 
 export default function AdminProductsPage() {
   const router = useRouter();
-  const { user,token } = useAuth();
-
+  const { user, token,loading:authLoading } = useAuth(); 
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); 
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
@@ -62,63 +61,64 @@ export default function AdminProductsPage() {
   const canBulkAction = selectedIds.length > 0;
 
   const fetchData = async () => {
-  if (!API_BASE_URL) {
-    setError("API base URL is not configured.");
-    return;
-  }
-  setLoading(true);
-  setError(null);
-  try {
-    const [prodRes, catRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/admin/products`, {
-        credentials: "include",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }),
-      fetch(`${API_BASE_URL}/categories`),
-    ]);
-
-    if (!prodRes.ok) {
-      console.log("prodRes status:", prodRes.status);
-      throw new Error("Failed to load products");
+    if (!API_BASE_URL) {
+      setError("API base URL is not configured.");
+      return;
     }
-    if (!catRes.ok) {
-      throw new Error("Failed to load categories");
+    setLoading(true);
+    setError(null);
+    try {
+      const [prodRes, catRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/admin/products`, {
+          credentials: "include",
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }),
+        fetch(`${API_BASE_URL}/categories`)
+      ]);
+
+      if (!prodRes.ok) {
+        console.log("prodRes status:", prodRes.status);
+        throw new Error("Failed to load products");
+      }
+      if (!catRes.ok) {
+        throw new Error("Failed to load categories");
+      }
+
+      const prodData = await prodRes.json();
+      const catData = await catRes.json();
+
+      const items = Array.isArray(prodData.items) ? prodData.items : [];
+      setProducts(items);
+      setCategories(Array.isArray(catData) ? catData : []);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "Failed to load admin data");
+    } finally {
+      setLoading(false);
     }
-
-    const prodData = await prodRes.json();
-    const catData = await catRes.json();
-
-    const items = Array.isArray(prodData.items) ? prodData.items : [];
-    setProducts(items);
-    setCategories(Array.isArray(catData) ? catData : []);
-  } catch (err: any) {
-    console.error(err);
-    setError(err?.message || "Failed to load admin data");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   useEffect(() => {
-  if (!user) {
-    router.push("/login?from=/admin/products");
-    return;
-  }
+    if(authLoading) return;
 
-  if (user.role !== "admin") {
-    router.push("/");
-  }
-}, [user, router]);
+    if (!user) {
+      router.push("/login?from=/admin/products");
+      return;
+    }
+    if (user.role !== "admin") {
+      router.push("/");
+      return;
+    }
+  }, [authLoading, user, router]);
 
-useEffect(() => {
-  if (!user || user.role !== "admin") return;
-  fetchData();
-}, [user,token]);
+  useEffect(() => {
+    if(authLoading) return;
+    if (!user || user.role !== "admin") return;
+    fetchData();
+  }, [authLoading, user, token]);
 
-  
   const resetForm = () => {
     setForm(emptyForm);
     setEditingId(null);
@@ -140,7 +140,7 @@ useEffect(() => {
       price: product.price != null ? String(product.price) : "",
       stock: product.stock != null ? String(product.stock) : "",
       categoryId: product.category?._id ?? "",
-      imageUrl: product.images?.[0] ?? "",
+      images: product.images ?? [],       
       isActive: product.isActive ?? true
     });
     setShowForm(true);
@@ -159,10 +159,10 @@ useEffect(() => {
 
       const res = await fetch(`${API_BASE_URL}/admin/products/${id}`, {
         method: "DELETE",
-        credentials:"include",
-        headers:{
-        Authorization: `Bearer ${token}`,
-        },
+        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
 
       if (!res.ok) {
@@ -180,47 +180,64 @@ useEffect(() => {
   };
 
   const handleImageFileUpload = async (file: File) => {
-  if (!API_BASE_URL || !file) return;
-  if (!token) {
-    setError("You must be logged in as admin to upload images.");
-    return;
-  }
-
-  try {
-    setUploadingImage(true);
-    setError(null);
-    setSuccess(null);
-
-    const formData = new FormData();
-    formData.append("image", file);
-
-    const res = await fetch(
-      `${API_BASE_URL}/admin/upload/product-image`,
-      {
-        method: "POST",
-        body: formData,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
-      throw new Error(data?.message || "Image upload failed");
+    if (!API_BASE_URL || !file) return;
+    if (!token) {
+      setError("You must be logged in as admin to upload images.");
+      return;
     }
 
-    const data = await res.json();
+    try {
+      setUploadingImage(true);
+      setError(null);
+      setSuccess(null);
 
-    setForm((prev) => ({ ...prev, imageUrl: data.url }));
-    setSuccess("Image uploaded successfully.");
-  } catch (err: any) {
-    console.error(err);
-    setError(err?.message || "Image upload failed.");
-  } finally {
-    setUploadingImage(false);
-  }
-};
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch(
+        `${API_BASE_URL}/admin/upload/product-image`,
+        {
+          method: "POST",
+          body: formData,
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message || "Image upload failed");
+      }
+
+      const data = await res.json();
+
+      setForm((prev) => ({
+        ...prev,
+        images: [...prev.images, data.url] 
+      }));
+      setSuccess("Image uploaded successfully.");
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "Image upload failed.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleRemoveImage = (url: string) => {
+    setForm((prev) => ({
+      ...prev,
+      images: prev.images.filter((u) => u !== url)
+    }));
+  };
+
+  const handleSetMainImage = (url: string) => {
+    setForm((prev) => {
+      const rest = prev.images.filter((u) => u !== url);
+      return { ...prev, images: [url, ...rest] };
+    });
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -235,19 +252,19 @@ useEffect(() => {
     }
 
     const slug = form.name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")    
-    .replace(/\s+/g, "-");          
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-");
 
     const payload = {
-    name: form.name,
-    slug,                               
-    categoryId: form.categoryId || null, 
-    price: Number(form.price),
-    stock: Number(form.stock),
-    isActive: form.isActive,
-    images: form.imageUrl ? [form.imageUrl] : []
+      name: form.name,
+      slug,
+      categoryId: form.categoryId || null,
+      price: Number(form.price),
+      stock: Number(form.stock),
+      isActive: form.isActive,
+      images: form.images 
     };
 
     try {
@@ -261,11 +278,11 @@ useEffect(() => {
       const res = await fetch(url, {
         method,
         headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify(payload),
-        credentials:"include",
+        credentials: "include"
       });
 
       if (!res.ok) {
@@ -274,7 +291,9 @@ useEffect(() => {
       }
 
       setSuccess(
-        formMode === "edit" ? "Product updated successfully." : "Product created successfully."
+        formMode === "edit"
+          ? "Product updated successfully."
+          : "Product created successfully."
       );
       await fetchData();
       if (formMode === "create") {
@@ -313,11 +332,11 @@ useEffect(() => {
       const res = await fetch(`${API_BASE_URL}/admin/products/bulk-status`, {
         method: "POST",
         headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({ ids: selectedIds, isActive }),
-        credentials:"include"
+        credentials: "include"
       });
 
       if (!res.ok) {
@@ -326,7 +345,9 @@ useEffect(() => {
       }
 
       setSuccess(
-        isActive ? "Selected products activated." : "Selected products deactivated."
+        isActive
+          ? "Selected products activated."
+          : "Selected products deactivated."
       );
       setSelectedIds([]);
       await fetchData();
@@ -345,7 +366,8 @@ useEffect(() => {
             Admin – Products
           </h1>
           <p className="text-sm text-slate-400">
-            Manage products, stock and visibility. Out-of-stock and inactive products are hidden from customers.
+            Manage products, stock and visibility. Out-of-stock and inactive
+            products are hidden from customers.
           </p>
         </div>
 
@@ -435,7 +457,10 @@ useEffect(() => {
                 className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-orange-400"
                 value={form.categoryId}
                 onChange={(e) =>
-                  setForm((prev) => ({ ...prev, categoryId: e.target.value }))
+                  setForm((prev) => ({
+                    ...prev,
+                    categoryId: e.target.value
+                  }))
                 }
               >
                 <option value="">(No category)</option>
@@ -448,57 +473,90 @@ useEffect(() => {
             </div>
 
             <div className="space-y-1 md:col-span-2">
-            <label className="text-xs text-slate-300">Product image</label>
-
-            {form.imageUrl && (
-              <div className="mb-2">
-                <img
-                  src={form.imageUrl}
-                  alt={form.name || "Preview"}
-                  className="h-24 w-24 rounded-lg object-cover border border-slate-700"
-                />
-              </div>
-            )}
-
-            <div
-              className="w-full rounded-lg border border-dashed border-slate-700 bg-slate-900/60 px-3 py-4 text-xs text-slate-400 flex flex-col items-center justify-center gap-2"
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const file = e.dataTransfer.files?.[0];
-                if (file) {
-                  void handleImageFileUpload(file);
-                }
-              }}
-            >
-              <p>Drag & drop an image file here</p>
-              <p className="text-[10px] text-slate-500">or</p>
-
-              <label className="inline-flex items-center px-3 py-1.5 rounded-full bg-slate-800 text-[11px] text-slate-100 cursor-pointer hover:bg-slate-700">
-                Choose file
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      void handleImageFileUpload(file);
-                    }
-                  }}
-                />
+              <label className="text-xs text-slate-300">
+                Product images (first one is main)
               </label>
 
-              {uploadingImage && (
-                <p className="text-[10px] text-slate-500 mt-1">Uploading…</p>
+              {form.images.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {form.images.map((url, idx) => (
+                    <div
+                      key={`${url}-${idx}`}
+                      className="relative inline-block"
+                    >
+                      <img
+                        src={url}
+                        alt={form.name || `Image ${idx + 1}`}
+                        className="h-20 w-20 rounded-lg object-cover border border-slate-700"
+                      />
+                      {idx === 0 && (
+                        <span className="absolute -top-1 -left-1 rounded-full bg-orange-500 text-[9px] px-1.5 py-[1px] text-slate-950 font-semibold">
+                          Main
+                        </span>
+                      )}
+                      <div className="absolute -bottom-1 left-0 right-0 flex justify-center gap-1">
+                        {idx !== 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetMainImage(url)}
+                            className="px-1.5 py-[1px] text-[9px] rounded-full bg-slate-900/80 text-slate-100 border border-slate-600 cursor-pointer"
+                          >
+                            Set main
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(url)}
+                          className="px-1.5 py-[1px] text-[9px] rounded-full bg-rose-900/80 text-rose-100 border border-rose-600 cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
-            </div>
 
-          </div>
+              <div
+                className="w-full rounded-lg border border-dashed border-slate-700 bg-slate-900/60 px-3 py-4 text-xs text-slate-400 flex flex-col items-center justify-center gap-2"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) {
+                    void handleImageFileUpload(file);
+                  }
+                }}
+              >
+                <p>Drag & drop an image file here</p>
+                <p className="text-[10px] text-slate-500">or</p>
+
+                <label className="inline-flex items-center px-3 py-1.5 rounded-full bg-slate-800 text-[11px] text-slate-100 cursor-pointer hover:bg-slate-700">
+                  Choose file
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        void handleImageFileUpload(file);
+                      }
+                    }}
+                  />
+                </label>
+
+                {uploadingImage && (
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Uploading…
+                  </p>
+                )}
+              </div>
+            </div>
 
             <div className="flex items-center gap-2 md:col-span-2">
               <input
@@ -507,13 +565,13 @@ useEffect(() => {
                 className="h-3 w-3 rounded border-slate-600 bg-slate-900"
                 checked={form.isActive}
                 onChange={(e) =>
-                  setForm((prev) => ({ ...prev, isActive: e.target.checked }))
+                  setForm((prev) => ({
+                    ...prev,
+                    isActive: e.target.checked
+                  }))
                 }
               />
-              <label
-                htmlFor="isActive"
-                className="text-xs text-slate-300"
-              >
+              <label htmlFor="isActive" className="text-xs text-slate-300">
                 Active (visible in store if stock &gt; 0)
               </label>
             </div>
@@ -529,8 +587,8 @@ useEffect(() => {
                     ? "Saving..."
                     : "Creating..."
                   : formMode === "edit"
-                    ? "Save changes"
-                    : "Create product"}
+                  ? "Save changes"
+                  : "Create product"}
               </button>
             </div>
           </form>
@@ -618,7 +676,9 @@ useEffect(() => {
                     </div>
                   </td>
                   <td className="px-3 py-2 align-middle text-slate-300">
-                    {p.category?.name ?? <span className="text-slate-500">–</span>}
+                    {p.category?.name ?? (
+                      <span className="text-slate-500">–</span>
+                    )}
                   </td>
                   <td className="px-3 py-2 align-middle text-right text-slate-100">
                     ${Number(p.price ?? 0).toFixed(2)}
@@ -686,9 +746,7 @@ useEffect(() => {
       </div>
 
       {loading && (
-        <p className="text-[11px] text-slate-500">
-          Loading / saving…
-        </p>
+        <p className="text-[11px] text-slate-500">Loading / saving…</p>
       )}
     </div>
   );
