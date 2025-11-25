@@ -47,6 +47,18 @@ export function AppHeader() {
           >
             Home
           </Link>
+
+          {!isAdmin &&
+          (
+          <Link
+            href="/order-tracking"
+            className="text-xs md:text-sm text-slate-200 hover:text-orange-300"
+          >
+            Order Tracking
+          </Link>
+          )
+          }
+          
           {!isAdmin && (
                <Link
             href="/cart"
@@ -60,8 +72,7 @@ export function AppHeader() {
             )}
           </Link>
           )}
-       
-
+          
           {!isLoggedIn && (
             <Link
               href="/login"
@@ -79,6 +90,14 @@ export function AppHeader() {
               >
                 Profile
               </Link>
+              {isAdmin && (
+               <Link
+                  href="/admin/orders"
+                  className="text-slate-300 hover:text-orange-400 transition"
+                >
+                  Orders
+                </Link>
+              )}
               {isAdmin && (
                <Link
                   href="/admin"

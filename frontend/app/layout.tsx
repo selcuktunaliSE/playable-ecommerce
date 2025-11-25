@@ -6,7 +6,7 @@ import { AuthProvider } from "@/contexts/auth-context";
 import { AppShell } from "@/components/AppShell";
 
 export const metadata: Metadata = {
-  title: "Playable E-commerce",
+  title: "Playable Store",
   description: "Case study store"
 };
 

@@ -76,21 +76,28 @@ export default async function ProductPage(props: ProductPageProps) {
       </nav>
 
       <section className="grid grid-cols-1 md:grid-cols-[1.3fr_1fr] gap-8">
-        {/* Sol taraf: resim galerisi */}
+        
         <ProductImageGallery images={images} name={product.name} />
 
-        {/* Sağ taraf: ürün bilgisi */}
         <div className="space-y-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-50">
               {product.name}
             </h1>
             {product.category?.name && (
+              
               <p className="text-xs mt-1 text-slate-400">
                 Category:{" "}
-                <span className="text-orange-400">
+                <Link href={
+                product.category?.slug
+                  ? `/category/${product.category.slug}`
+                  : "/category/all"
+              }>
+                 <span className="text-orange-400">
                   {product.category.name}
                 </span>
+                </Link>
+               
               </p>
             )}
           </div>
@@ -108,21 +115,8 @@ export default async function ProductPage(props: ProductPageProps) {
             {product.description || "No description available."}
           </p>
 
-          <div className="text-xs text-slate-400 space-y-1">
-            <p>
-              Stock:{" "}
-              <span
-                className={
-                  stock > 0 ? "text-emerald-400" : "text-rose-400"
-                }
-              >
-                {stock > 0 ? `${stock} available` : "Out of stock"}
-              </span>
-            </p>
-            <p>Product ID: {product._id}</p>
-          </div>
 
-          <div className="pt-2">
+          <div >
             <ProductAddToCart
               productId={product._id}
               name={product.name}
@@ -141,7 +135,7 @@ export default async function ProductPage(props: ProductPageProps) {
               }
               className="text-xs text-slate-400 hover:text-orange-300 hover:underline"
             >
-              ← Back to {product.category?.name ?? "catalog"}
+              ← Back to {product.category?.name ?? "catalog"} Category
             </Link>
           </div>
         </div>

@@ -46,7 +46,7 @@ router.post("/register", async (req, res) => {
     });
   } catch (err) {
     console.error("register error", err);
-    res.status(500).json({ message: "Server error",err });
+    res.status(500).json({ message: "Server error", err });
   }
 });
 
@@ -85,7 +85,7 @@ router.post("/login", async (req, res) => {
     });
   } catch (err) {
     console.error("login error", err);
-    res.status(500).json({ message: "Server error",err });
+    res.status(500).json({ message: "Server error", err });
   }
 });
 
@@ -104,7 +104,7 @@ router.get("/profile", auth, async (req: AuthRequest, res) => {
     });
   } catch (err) {
     console.error("profile error", err);
-    res.status(500).json({ message: "Server error",err });
+    res.status(500).json({ message: "Server error", err });
   }
 });
 
@@ -121,5 +121,48 @@ router.get("/profile/orders", auth, async (req: AuthRequest, res) => {
   }
 });
 
+router.post(
+  "/change-password",
+  auth,
+  async (req: AuthRequest, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res
+          .status(400)
+          .json({
+            message: "Current password and new password are required."
+          });
+      }
+
+      if (!req.userId) {
+        return res.status(401).json({ message: "Not authenticated." });
+      }
+
+      const user = await User.findById(req.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found." });
+      }
+
+      const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isMatch) {
+        return res
+          .status(400)
+          .json({ message: "Current password is incorrect." });
+      }
+
+      const newHash = await bcrypt.hash(newPassword, 10);
+      user.passwordHash = newHash;
+
+      await user.save();
+
+      return res.json({ message: "Password updated successfully." });
+    } catch (err) {
+      console.error("change-password error:", err);
+      return res.status(500).json({ message: "Internal server error." });
+    }
+  }
+);
 
 export default router;

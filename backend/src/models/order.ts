@@ -18,11 +18,17 @@ interface IShippingAddress {
 }
 
 export interface IOrder extends Document {
-  user?: Types.ObjectId; 
+  user?: Types.ObjectId;
   items: IOrderItem[];
   shippingAddress: IShippingAddress;
   paymentStatus: "pending" | "paid";
+  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   totalAmount: number;
+  paymentInfo?: {
+    method?: string;
+    last4?: string;
+  };
+  shortCode?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,7 +61,7 @@ const orderSchema = new Schema<IOrder>(
     user: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: false 
+      required: false
     },
     items: { type: [orderItemSchema], required: true },
     shippingAddress: { type: shippingAddressSchema, required: true },
@@ -64,9 +70,37 @@ const orderSchema = new Schema<IOrder>(
       enum: ["pending", "paid"],
       default: "paid"
     },
-    totalAmount: { type: Number, required: true }
+
+    status: {
+      type: String,
+      enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
+      default: "pending"
+    },
+
+    totalAmount: { type: Number, required: true },
+
+    paymentInfo: {
+      method: { type: String },
+      last4: { type: String }
+    },
+    
+    shortCode: {
+      type: String,
+      index: true
+    }
   },
   { timestamps: true }
 );
+
+orderSchema.pre("save", function (next) {
+  const doc = this as IOrder;
+
+  if (!doc.shortCode && doc._id) {
+    const hex = doc._id.toString(); 
+    doc.shortCode = hex.slice(-6); 
+  }
+
+  next();
+});
 
 export default mongoose.model<IOrder>("Order", orderSchema);

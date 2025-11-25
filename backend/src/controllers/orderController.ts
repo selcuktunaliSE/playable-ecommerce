@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import { AuthRequest } from "../middleware/auth";
 import Product from "../models/product";
 import Order from "../models/order";
@@ -95,12 +95,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     }
 
     const productIds = items
-      .map(
-        (i) =>
-          i.productId ||
-          i.product ||
-          i._id
-      )
+      .map((i) => i.productId || i.product || i._id)
       .filter(Boolean) as string[];
 
     const products = await Product.find({
@@ -115,8 +110,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     let totalAmount = 0;
 
     for (const item of items) {
-      const productId =
-        (item.productId || item.product || item._id) as string;
+      const productId = (item.productId || item.product || item._id) as string;
       const product = productMap.get(productId);
 
       if (!product) continue;
@@ -163,6 +157,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       items: orderItems,
       shippingAddress,
       paymentStatus: "paid",
+      status: "pending",    
       totalAmount,
       paymentInfo: {
         method: "card",
@@ -173,22 +168,21 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     if (userId) {
       orderData.user = userId;
       console.log("createOrder attaching user to order:", userId);
-    } 
-    else {
-    console.log("createOrder: NO userId, saving as guest order");
+    } else {
+      console.log("createOrder: NO userId, saving as guest order");
     }
-    
+
+    // 🔥 Sales count arttır
     for (const oi of orderItems) {
-    await Product.updateOne(
-    { _id: oi.product },
-      { $inc: { salesCount: oi.quantity } }
-    );
+      await Product.updateOne(
+        { _id: oi.product },
+        { $inc: { salesCount: oi.quantity } }
+      );
     }
 
     const order = await Order.create(orderData);
     console.log("createOrder DONE. Saved order id:", order._id);
     res.status(201).json(order);
-    
   } catch (err) {
     console.error("createOrder error", err);
     res.status(500).json({ message: "Server error" });
@@ -229,10 +223,10 @@ export const getOrderById = async (req: AuthRequest, res: Response) => {
     if (!userId && req.userRole !== "admin") {
       return res.status(401).json({ message: "Not authenticated" });
     }
-   
+
     if (
-      order.user &&              
-      userId &&                 
+      order.user &&
+      userId &&
       order.user.toString() !== userId &&
       req.userRole !== "admin"
     ) {
@@ -246,3 +240,40 @@ export const getOrderById = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const publicTrackOrder = async (req: Request, res: Response) => {
+  try {
+    const rawCode = String(req.params.code || "");
+    const code = rawCode.trim().replace(/^#/, "").toLowerCase(); 
+
+    if (!code) {
+      return res.status(400).json({ message: "Order code is required" });
+    }
+
+    let order: any = null;
+
+    if (/^[0-9a-f]{24}$/.test(code)) {
+      order = await Order.findById(code).lean();
+    }
+
+    if (!order && /^[0-9a-f]{6}$/.test(code)) {
+      order = await Order.findOne({ shortCode: code }).lean();
+    }
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    return res.json({
+      id: order._id.toString(),
+      createdAt: order.createdAt,
+      shortCode:order.shortCode,
+      paymentStatus: order.paymentStatus,
+      status: order.status || "pending",
+      totalAmount: order.totalAmount,
+      shippingName: order.shippingAddress?.fullName ?? "Customer"
+    });
+  } catch (err) {
+    console.error("publicTrackOrder error", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};

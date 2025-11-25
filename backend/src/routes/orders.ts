@@ -1,16 +1,21 @@
-import { Router } from "express";
-import {
-  createOrder,
-  getMyOrders,
-  getOrderById
-} from "../controllers/orderController";
-import { auth, optionalAuth } from "../middleware/auth";
+  import { Router } from "express";
+  import {
+    createOrder,
+    getMyOrders,
+    getOrderById,
+    publicTrackOrder
+  } from "../controllers/orderController";
+  import { auth, optionalAuth } from "../middleware/auth";
 
-const router = Router();
-router.post("/", optionalAuth, createOrder);
+  const router = Router();
 
-router.get("/my", auth, getMyOrders);
+  router.post("/", optionalAuth, createOrder);
 
-router.get("/:id", auth, getOrderById);
+  router.get("/my", auth, getMyOrders);
 
-export default router;
+  router.get("/track/:code", publicTrackOrder);
+
+  router.get("/:id", auth, getOrderById);
+
+
+  export default router;

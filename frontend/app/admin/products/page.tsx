@@ -572,7 +572,7 @@ export default function AdminProductsPage() {
                 }
               />
               <label htmlFor="isActive" className="text-xs text-slate-300">
-                Active (visible in store if stock &gt; 0)
+                Active
               </label>
             </div>
 

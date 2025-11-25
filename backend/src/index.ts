@@ -13,6 +13,8 @@ import adminCategoryRoutes from "./routes/adminCategory";
 import adminUploadRoutes from "./routes/adminUpload";
 import path from "path";
 import adminDashboardRoutes from "./routes/adminDashboard";
+import adminOrderRoutes from "./routes/adminOrders"
+
 
 import authRoutes from "./routes/auth";
 
@@ -34,7 +36,7 @@ app.use(
   cors({
     origin: "http://localhost:3000", 
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], 
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS","PATCH"], 
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
@@ -54,6 +56,8 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/admin/categories",adminCategoryRoutes)
 app.use("/api/admin/upload", adminUploadRoutes);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
+app.use("/api/admin/orders",adminOrderRoutes)
+
 async function start() {
   try {
     const uri = process.env.MONGODB_URI as string;

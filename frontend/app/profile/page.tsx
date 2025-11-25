@@ -29,6 +29,7 @@ type Order = {
   };
   paymentMethod?: string;
   status?: string;
+  shortCode?: string;
 };
 
 export default function ProfilePage() {
@@ -40,21 +41,18 @@ export default function ProfilePage() {
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
-  // Şifre değiştirme
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
 
-  // Login değilse login sayfasına
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
     }
   }, [user, loading, router]);
 
-  // Siparişleri çek
   useEffect(() => {
     if (!token) return;
 
@@ -80,6 +78,7 @@ export default function ProfilePage() {
         const mapped: Order[] = raw
           .map((o: any) => ({
             _id: o._id,
+            shortCode: o.shortCode, 
             total: o.totalAmount ?? o.total ?? 0,
             createdAt: o.createdAt,
             items: o.items ?? [],
@@ -178,7 +177,6 @@ export default function ProfilePage() {
       </h1>
 
       <div className="grid gap-6 md:grid-cols-[1.1fr_1.4fr]">
-        {/* SOL: Kullanıcı bilgisi + Change password butonu + form */}
         <section className="space-y-4">
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
             <div className="flex items-start justify-between gap-3">
@@ -312,7 +310,7 @@ export default function ProfilePage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
                         <p className="text-slate-100 font-medium">
-                          Order #{o._id.slice(-6)}
+                          Order #{(o.shortCode ?? o._id.slice(-6)).toUpperCase()}
                         </p>
                         <p className="text-[11px] text-slate-400">
                           {new Date(o.createdAt).toLocaleString()}
@@ -343,7 +341,6 @@ export default function ProfilePage() {
 
                     {isExpanded && (
                       <div className="mt-3 border-t border-slate-800 pt-3 space-y-3">
-                        {/* Items */}
                         <div className="space-y-1">
                           <p className="text-xs font-semibold text-slate-200">
                             Items
@@ -400,7 +397,6 @@ export default function ProfilePage() {
                           </div>
                         </div>
 
-                        {/* Shipping */}
                         {o.shippingAddress && (
                           <div className="space-y-1">
                             <p className="text-xs font-semibold text-slate-200">
@@ -425,7 +421,6 @@ export default function ProfilePage() {
                           </div>
                         )}
 
-                        {/* Payment */}
                         {o.paymentMethod && (
                           <div className="space-y-1">
                             <p className="text-xs font-semibold text-slate-200">

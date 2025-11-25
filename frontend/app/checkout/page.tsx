@@ -1,9 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { useCart } from "@/contexts/cart-context";
+import Link from "next/link";
 
 const STORAGE_KEY = "playable_ecommerce_auth";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -21,19 +21,20 @@ function formatExpiry(value: string): string {
 
 export default function CheckoutPage() {
   const { user, token } = useAuth();
-  const router = useRouter();
 
   const cart = useCart() as any;
   const items = cart.items ?? cart.cartItems ?? [];
   const clearCart = cart.clearCart ?? cart.reset ?? (() => {});
   const cartTotal =
-    cart.total ??
-    cart.totalAmount ??
-    items.reduce(
-      (sum: number, item: any) =>
-        sum + Number(item.price ?? 0) * Number(item.quantity ?? 1),
-      0
-    );
+  cart.total ??
+  cart.totalAmount ??
+  items.reduce(
+    (sum: number, item: any) =>
+      sum + Number(item.price ?? 0) * Number(item.quantity ?? 1),
+    0
+  );
+
+const subtotal = Number(cartTotal) || 0;
 
   const [fullName, setFullName] = useState(user?.name ?? "");
   const [addressLine1, setAddressLine1] = useState("");
@@ -41,6 +42,21 @@ export default function CheckoutPage() {
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("Turkiye");
+  let shippingFee = 0;
+
+if (subtotal > 0) {
+  if (country === "Turkiye") {
+    shippingFee = 5;
+  } else if (country === "United States") {
+    shippingFee = 15;
+  } else {
+    shippingFee = 10;
+  }
+}
+
+const TAX_RATE = 0.18;
+const taxAmount = subtotal * TAX_RATE;
+const orderTotal = subtotal + shippingFee + taxAmount;
 
   const [cardName, setCardName] = useState("");
   const [cardNumber, setCardNumber] = useState("");
@@ -51,10 +67,26 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyOrderId = async () => {
+    if (!orderId) return;
+    try {
+      await navigator.clipboard.writeText(orderId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    setOrderId(null);
 
     if (!items || items.length === 0) {
       setError("Your cart is empty.");
@@ -126,7 +158,7 @@ export default function CheckoutPage() {
           
         }
       }
-      
+
       const headers: Record<string, string> = {
         "Content-Type": "application/json"
       };
@@ -173,14 +205,12 @@ export default function CheckoutPage() {
       const order = await res.json();
       console.log("ORDER CREATED:", order);
 
-      clearCart();
-      setSuccess("Your order has been placed successfully.");
+      const createdId = order.shortCode
+      setOrderId(createdId ?? null);
 
-      if (bodyUserId) {
-        router.push("/profile");
-      } else {
-        router.push("/");
-      }
+      clearCart();
+      setSuccess("Your order has been placed successfully. Your order ID is below.");
+      
     } catch (err: any) {
       console.error("Order error:", err);
       setError(err?.message || "Something went wrong.");
@@ -262,15 +292,21 @@ export default function CheckoutPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-slate-300">Country</label>
-              <input
-                type="text"
-                required
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-400"
-              />
-            </div>
+            <label className="text-xs text-slate-300">Country</label>
+            <select
+              required
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-orange-400"
+            >
+              <option value="Turkiye">Türkiye</option>
+              <option value="Germany">Germany</option>
+              <option value="United Kingdom">United Kingdom</option>
+              <option value="United States">United States</option>
+              <option value="France">France</option>
+            </select>
+          </div>
+
           </div>
 
           <div className="pt-3 mt-3 border-t border-slate-800 space-y-2">
@@ -357,6 +393,36 @@ export default function CheckoutPage() {
             <p className="text-xs text-emerald-400 mt-2">{success}</p>
           )}
 
+          {orderId && (
+            <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-3 space-y-2">
+              <p className="text-xs text-slate-300">
+                Your order ID (keep this to track your order):
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 truncate rounded-lg bg-slate-900 px-3 py-2 text-xs text-orange-300 border border-slate-700">
+                  {orderId}
+                </code>
+                <button
+                  type="button"
+                  onClick={handleCopyOrderId}
+                  className="px-3 py-1.5 rounded-full bg-slate-800 text-[11px] text-slate-100 hover:bg-slate-700 transition"
+                >
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                You can track this order on the{" "}
+                <Link
+                  href={`/order-tracking?orderId=${orderId}`}
+                  className="text-orange-400 hover:text-orange-300 hover:underline"
+                >
+                  Order Tracking
+                </Link>{" "}
+                page using this ID.
+              </p>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading || items.length === 0}
@@ -394,15 +460,35 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          <div className="border-t border-slate-800 pt-3 flex justify-between text-sm font-semibold">
-            <span>Total</span>
-            <span>${Number(cartTotal).toFixed(2)}</span>
+          <div className="border-t border-slate-800 pt-3 space-y-1 text-sm">
+            <div className="flex justify-between text-slate-200">
+              <span>Subtotal</span>
+              <span>${subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-slate-200">
+              <span>Shipping</span>
+              <span>{shippingFee > 0 ? `$${shippingFee.toFixed(2)}` : "$0.00"}</span>
+            </div>
+            <div className="flex justify-between text-slate-200">
+              <span>Tax (18%)</span>
+              <span>${taxAmount.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between font-semibold text-slate-100 pt-2 border-t border-slate-800 mt-2">
+              <span>Total</span>
+              <span>${orderTotal.toFixed(2)}</span>
+            </div>
           </div>
 
-          <p className="text-[11px] text-slate-500">
-            This is a demo checkout – a valid-looking card number will simulate a
-            successful payment.
-          </p>
+         <p className="text-[11px] text-slate-500">
+        Shipping fees are estimated based on your selected country
+        ($5 for Türkiye, $10 for EU countries,
+        and $15 for the United States)
+
+        </p>
+         <p className="text-[11px] text-slate-500">
+        This is a demo checkout – a valid-looking card number will simulate
+        a successful payment.
+         </p>
         </aside>
       </div>
     </div>

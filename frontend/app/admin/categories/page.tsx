@@ -145,7 +145,6 @@ export default function AdminCategoriesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
@@ -178,7 +177,6 @@ export default function AdminCategoriesPage() {
         </div>
       )}
 
-      {/* Form */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-slate-50">
@@ -274,7 +272,6 @@ export default function AdminCategoriesPage() {
         </form>
       </section>
 
-      {/* Category list */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 space-y-3">
         <h2 className="text-sm font-semibold text-slate-50">
           Categories ({categories.length})

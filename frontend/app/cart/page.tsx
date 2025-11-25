@@ -46,14 +46,14 @@ export default function CartPage() {
         <button
           type="button"
           onClick={clearCart}
-          className="text-xs text-slate-400 hover:text-rose-300 hover:underline"
+          className="text-xs text-slate-400 hover:text-rose-300 hover:underline cursor-pointer"
         >
           Clear cart
         </button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
-        {/* Items */}
+        
         <div className="space-y-3">
           {items.map((item: any) => (
             <div
