@@ -98,6 +98,16 @@ export function AppHeader() {
                   Orders
                 </Link>
               )}
+              {isAdmin &&
+          (
+          <Link
+            href="/admin/categories"
+            className="text-xs md:text-sm text-slate-200 hover:text-orange-300"
+          >
+            Categories
+          </Link>
+          )
+          }
               {isAdmin && (
                <Link
                   href="/admin"
@@ -111,9 +121,10 @@ export function AppHeader() {
                   href="/admin/products"
                   className="text-slate-300 hover:text-orange-400 transition"
                 >
-                  Panel
+                  Products
                 </Link>
               )}
+
 
               <button
                 type="button"
