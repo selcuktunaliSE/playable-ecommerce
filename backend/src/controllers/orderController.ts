@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { AuthRequest } from "../middleware/auth";
 import Product from "../models/product";
 import Order from "../models/order";
+import mongoose from "mongoose";
 
 export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
@@ -21,7 +22,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         quantity?: number;
         name?: string;
         image?: string;
-        options?: { name: string; value: string }[]; // ⭐ seçilen opsiyonlar
+        options?: { name: string; value: string }[];
       }>;
       shippingAddress: {
         fullName: string;
@@ -59,40 +60,16 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
     const pm = paymentMethod ?? "card";
     if (pm !== "card") {
-      return res
-        .status(400)
-        .json({ message: "Unsupported payment method in this demo" });
+      return res.status(400).json({ message: "Unsupported payment method" });
     }
 
     if (
       !paymentDetails ||
-      !paymentDetails.cardName ||
       !paymentDetails.cardNumber ||
-      !paymentDetails.expiry ||
-      !paymentDetails.cvc
+      !paymentDetails.cvc ||
+      !paymentDetails.expiry
     ) {
-      return res
-        .status(400)
-        .json({ message: "Payment details are incomplete" });
-    }
-
-    const sanitizedCardNumber = paymentDetails.cardNumber.replace(/\s+/g, "");
-
-    if (!/^\d{16}$/.test(sanitizedCardNumber)) {
-      return res.status(400).json({ message: "Invalid card number" });
-    }
-
-    if (!/^\d{3}$/.test(paymentDetails.cvc.trim())) {
-      return res.status(400).json({ message: "Invalid CVC" });
-    }
-
-    const expiryMatch = paymentDetails.expiry.match(/^(\d{2})\/(\d{2})$/);
-    if (!expiryMatch) {
-      return res.status(400).json({ message: "Invalid expiry date format" });
-    }
-    const month = Number(expiryMatch[1]);
-    if (month < 1 || month > 12) {
-      return res.status(400).json({ message: "Invalid expiry month" });
+      return res.status(400).json({ message: "Payment details incomplete" });
     }
 
     const productIds = items
@@ -108,7 +85,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     );
 
     const orderItems: any[] = [];
-    let totalAmount = 0;
+    let subtotal = 0; 
 
     for (const item of items) {
       const productId = (item.productId || item.product || item._id) as string;
@@ -130,15 +107,13 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
           (o: any) => o.name === selected.name
         );
         if (!optDef || !Array.isArray(optDef.values)) continue;
-
         const valDef = optDef.values.find(
           (v: any) => v.value === selected.value
         );
-        if (!valDef) continue;
-
-        optionPriceDeltaTotal += Number(valDef.priceDelta ?? 0);
+        if (valDef) {
+          optionPriceDeltaTotal += Number(valDef.priceDelta ?? 0);
+        }
       }
-
       const finalPrice = basePrice + optionPriceDeltaTotal;
 
       orderItems.push({
@@ -150,64 +125,56 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         options: selectedOptions.length > 0 ? selectedOptions : undefined
       });
 
-      totalAmount += finalPrice * quantity;
+      subtotal += finalPrice * quantity;
     }
 
     if (orderItems.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "No valid products found in cart" });
+      return res.status(400).json({ message: "No valid products found" });
     }
 
-    // Stok kontrolü
-    for (const oi of orderItems) {
-      const p = productMap.get(oi.product.toString());
-      const currentStock = Number((p as any)?.stock ?? 0);
-
-      if (currentStock < oi.quantity) {
-        return res.status(400).json({
-          message: `Not enough stock for ${oi.name}. Available: ${currentStock}, requested: ${oi.quantity}`
-        });
-      }
-    }
-
-    // Stok düş
     for (const oi of orderItems) {
       await Product.updateOne(
         { _id: oi.product },
-        { $inc: { stock: -oi.quantity } }
+        { $inc: { stock: -oi.quantity, salesCount: oi.quantity } }
       );
     }
 
+    let shippingFee = 0;
+    if (subtotal > 0) {
+        const country = shippingAddress.country;
+        if (country === "Turkiye" || country === "Türkiye") {
+            shippingFee = 5;
+        } else if (country === "United States") {
+            shippingFee = 15;
+        } else {
+            shippingFee = 10; 
+        }
+    }
+
+    const taxAmount = subtotal * 0.18;
+    const finalTotal = subtotal + shippingFee + taxAmount;
+
+    const tempId = new mongoose.Types.ObjectId();
+    const shortCode = tempId.toString().slice(-6);
+
     const orderData: any = {
+      _id: tempId,
+      user: userId || undefined,
       items: orderItems,
       shippingAddress,
       paymentStatus: "paid",
       status: "pending",
-      totalAmount,
+      totalAmount: finalTotal, 
+      shortCode: shortCode,
       paymentInfo: {
         method: "card",
-        last4: sanitizedCardNumber.slice(-4)
+        last4: paymentDetails.cardNumber.slice(-4)
       }
     };
 
-    if (userId) {
-      orderData.user = userId;
-      console.log("createOrder attaching user to order:", userId);
-    } else {
-      console.log("createOrder: NO userId, saving as guest order");
-    }
-
-    // 🔥 Sales count arttır
-    for (const oi of orderItems) {
-      await Product.updateOne(
-        { _id: oi.product },
-        { $inc: { salesCount: oi.quantity } }
-      );
-    }
-
     const order = await Order.create(orderData);
-    console.log("createOrder DONE. Saved order id:", order._id);
+    console.log(`✅ Order created: ${order._id}, Total: $${finalTotal.toFixed(2)}`);
+    
     res.status(201).json(order);
   } catch (err) {
     console.error("createOrder error", err);
@@ -238,16 +205,14 @@ export const getOrderById = async (req: AuthRequest, res: Response) => {
     const userId = req.userId;
     const { id } = req.params;
 
-    const order = await Order.findById(id)
-      .populate("items.product")
-      .lean();
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(404).json({ message: "Order not found (invalid ID)" });
+    }
+
+    const order = await Order.findById(id).populate("items.product").lean();
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
-    }
-
-    if (!userId && req.userRole !== "admin") {
-      return res.status(401).json({ message: "Not authenticated" });
     }
 
     if (

@@ -225,7 +225,7 @@ export default function AdminOrdersPage() {
             Admin – Orders
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Manage all orders from a single place.
+            Manage all orders from a single place. Displaying prices after tax and shipping fees
           </p>
         </div>
 
