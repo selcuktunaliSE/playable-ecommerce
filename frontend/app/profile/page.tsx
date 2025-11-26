@@ -34,6 +34,7 @@ type Order = {
 
 export default function ProfilePage() {
   const { user, token, loading } = useAuth();
+  const isAdmin = user?.role === "admin";
   const { addToast } = useToast();
   const router = useRouter();
 
@@ -54,7 +55,8 @@ export default function ProfilePage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (!token) return;
+    // ⭐ Admin ise siparişleri çekme
+    if (!token || isAdmin) return;
 
     const fetchOrders = async () => {
       setLoadingOrders(true);
@@ -101,7 +103,7 @@ export default function ProfilePage() {
     };
 
     fetchOrders();
-  }, [token, addToast]);
+  }, [token, addToast, isAdmin]);
 
   const handlePasswordChange = async (e: FormEvent) => {
     e.preventDefault();
@@ -271,174 +273,169 @@ export default function ProfilePage() {
                 {changingPassword ? "Updating…" : "Change password"}
               </button>
 
-              <p className="text-[11px] text-slate-500 mt-1">
-                This calls{" "}
-                <code className="px-1 rounded bg-slate-800 text-[10px]">
-                  /auth/change-password
-                </code>{" "}
-                on the API.
-              </p>
             </form>
           )}
         </section>
+        
+        {!isAdmin && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Order history</h2>
+              {orders.length > 0 && (
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300">
+                  {orders.length} order{orders.length !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
 
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Order history</h2>
-            {orders.length > 0 && (
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300">
-                {orders.length} order{orders.length !== 1 ? "s" : ""}
-              </span>
-            )}
-          </div>
-
-          {loadingOrders ? (
-            <p className="text-sm text-slate-400">Loading orders…</p>
-          ) : orders.length === 0 ? (
-            <p className="text-sm text-slate-400">
-              You don&apos;t have any orders yet.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {orders.map((o) => {
-                const isExpanded = expandedOrderId === o._id;
-                return (
-                  <div
-                    key={o._id}
-                    className="bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <p className="text-slate-100 font-medium">
-                          Order #{(o.shortCode ?? o._id.slice(-6)).toUpperCase()}
-                        </p>
-                        <p className="text-[11px] text-slate-400">
-                          {new Date(o.createdAt).toLocaleString()}
-                        </p>
-                        {o.status && (
-                          <span className="inline-flex mt-1 px-2 py-0.5 rounded-full text-[11px] bg-slate-800 text-slate-300">
-                            {o.status}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-right space-y-1">
-                        <div className="text-sm text-orange-400 font-semibold">
-                          ${o.total.toFixed(2)}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExpandedOrderId((prev) =>
-                              prev === o._id ? null : o._id
-                            )
-                          }
-                          className="text-[11px] text-slate-300 hover:text-orange-300 hover:underline"
-                        >
-                          {isExpanded ? "Hide details" : "View details"}
-                        </button>
-                      </div>
-                    </div>
-
-                    {isExpanded && (
-                      <div className="mt-3 border-t border-slate-800 pt-3 space-y-3">
+            {loadingOrders ? (
+              <p className="text-sm text-slate-400">Loading orders…</p>
+            ) : orders.length === 0 ? (
+              <p className="text-sm text-slate-400">
+                You don&apos;t have any orders yet.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {orders.map((o) => {
+                  const isExpanded = expandedOrderId === o._id;
+                  return (
+                    <div
+                      key={o._id}
+                      className="bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
-                          <p className="text-xs font-semibold text-slate-200">
-                            Items
+                          <p className="text-slate-100 font-medium">
+                            Order #{(o.shortCode ?? o._id.slice(-6)).toUpperCase()}
                           </p>
-                          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                            {o.items && o.items.length > 0 ? (
-                              o.items.map((item, idx) => (
-                                <div
-                                  key={item._id ?? item.productId ?? idx}
-                                  className="flex items-center justify-between gap-3 text-xs"
-                                >
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    {item.image && (
-                                      <div className="w-8 h-8 rounded bg-slate-800 overflow-hidden flex-shrink-0">
-                                        <img
-                                          src={item.image}
-                                          alt={item.name}
-                                          className="w-full h-full object-cover"
-                                        />
+                          <p className="text-[11px] text-slate-400">
+                            {new Date(o.createdAt).toLocaleString()}
+                          </p>
+                          {o.status && (
+                            <span className="inline-flex mt-1 px-2 py-0.5 rounded-full text-[11px] bg-slate-800 text-slate-300">
+                              {o.status}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right space-y-1">
+                          <div className="text-sm text-orange-400 font-semibold">
+                            ${o.total.toFixed(2)}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedOrderId((prev) =>
+                                prev === o._id ? null : o._id
+                              )
+                            }
+                            className="text-[11px] text-slate-300 hover:text-orange-300 hover:underline"
+                          >
+                            {isExpanded ? "Hide details" : "View details"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {isExpanded && (
+                        <div className="mt-3 border-t border-slate-800 pt-3 space-y-3">
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold text-slate-200">
+                              Items
+                            </p>
+                            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                              {o.items && o.items.length > 0 ? (
+                                o.items.map((item, idx) => (
+                                  <div
+                                    key={item._id ?? item.productId ?? idx}
+                                    className="flex items-center justify-between gap-3 text-xs"
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      {item.image && (
+                                        <div className="w-8 h-8 rounded bg-slate-800 overflow-hidden flex-shrink-0">
+                                          <img
+                                            src={item.image}
+                                            alt={item.name}
+                                            className="w-full h-full object-cover"
+                                          />
+                                        </div>
+                                      )}
+                                      <div className="min-w-0">
+                                        <p className="text-slate-100 truncate">
+                                          {item.name}
+                                        </p>
+                                        <p className="text-[11px] text-slate-400">
+                                          Qty: {item.quantity}
+                                        </p>
                                       </div>
-                                    )}
-                                    <div className="min-w-0">
-                                      <p className="text-slate-100 truncate">
-                                        {item.name}
-                                      </p>
-                                      <p className="text-[11px] text-slate-400">
-                                        Qty: {item.quantity}
-                                      </p>
+                                    </div>
+                                    <div className="text-right flex-shrink-0">
+                                      {item.price != null && (
+                                        <>
+                                          <p className="text-[11px] text-slate-400">
+                                            ${Number(item.price).toFixed(2)} each
+                                          </p>
+                                          <p className="text-[11px] text-slate-100 font-medium">
+                                            $
+                                            {(
+                                              Number(item.price) *
+                                              Number(item.quantity)
+                                            ).toFixed(2)}
+                                          </p>
+                                        </>
+                                      )}
                                     </div>
                                   </div>
-                                  <div className="text-right flex-shrink-0">
-                                    {item.price != null && (
-                                      <>
-                                        <p className="text-[11px] text-slate-400">
-                                          ${Number(item.price).toFixed(2)} each
-                                        </p>
-                                        <p className="text-[11px] text-slate-100 font-medium">
-                                          $
-                                          {(
-                                            Number(item.price) *
-                                            Number(item.quantity)
-                                          ).toFixed(2)}
-                                        </p>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <p className="text-[11px] text-slate-500">
-                                No item details available for this order.
+                                ))
+                              ) : (
+                                <p className="text-[11px] text-slate-500">
+                                  No item details available for this order.
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {o.shippingAddress && (
+                            <div className="space-y-1">
+                              <p className="text-xs font-semibold text-slate-200">
+                                Shipping address
                               </p>
-                            )}
-                          </div>
+                              <p className="text-[11px] text-slate-300">
+                                {o.shippingAddress.fullName}
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                {o.shippingAddress.addressLine1}
+                                {o.shippingAddress.addressLine2
+                                  ? `, ${o.shippingAddress.addressLine2}`
+                                  : ""}
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                {o.shippingAddress.postalCode}{" "}
+                                {o.shippingAddress.city}
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                {o.shippingAddress.country}
+                              </p>
+                            </div>
+                          )}
+
+                          {o.paymentMethod && (
+                            <div className="space-y-1">
+                              <p className="text-xs font-semibold text-slate-200">
+                                Payment
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                Method: {o.paymentMethod}
+                              </p>
+                            </div>
+                          )}
                         </div>
-
-                        {o.shippingAddress && (
-                          <div className="space-y-1">
-                            <p className="text-xs font-semibold text-slate-200">
-                              Shipping address
-                            </p>
-                            <p className="text-[11px] text-slate-300">
-                              {o.shippingAddress.fullName}
-                            </p>
-                            <p className="text-[11px] text-slate-400">
-                              {o.shippingAddress.addressLine1}
-                              {o.shippingAddress.addressLine2
-                                ? `, ${o.shippingAddress.addressLine2}`
-                                : ""}
-                            </p>
-                            <p className="text-[11px] text-slate-400">
-                              {o.shippingAddress.postalCode}{" "}
-                              {o.shippingAddress.city}
-                            </p>
-                            <p className="text-[11px] text-slate-400">
-                              {o.shippingAddress.country}
-                            </p>
-                          </div>
-                        )}
-
-                        {o.paymentMethod && (
-                          <div className="space-y-1">
-                            <p className="text-xs font-semibold text-slate-200">
-                              Payment
-                            </p>
-                            <p className="text-[11px] text-slate-400">
-                              Method: {o.paymentMethod}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );

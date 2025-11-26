@@ -6,6 +6,16 @@ import { useRouter } from "next/navigation";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
+type ProductOptionValue = {
+  value: string;
+  priceDelta?: number;
+};
+
+type ProductOption = {
+  name: string;
+  values: ProductOptionValue[];
+};
+
 type AdminProduct = {
   _id: string;
   name: string;
@@ -17,6 +27,7 @@ type AdminProduct = {
     _id: string;
     name: string;
   };
+  options?: ProductOption[];
 };
 
 type Category = {
@@ -29,8 +40,9 @@ type FormState = {
   price: string;
   stock: string;
   categoryId: string;
-  images: string[];      
+  images: string[];
   isActive: boolean;
+  optionsJson: string;
 };
 
 const emptyForm: FormState = {
@@ -39,7 +51,8 @@ const emptyForm: FormState = {
   stock: "",
   categoryId: "",
   images: [],
-  isActive: true
+  isActive: true,
+  optionsJson: ""
 };
 
 export default function AdminProductsPage() {
@@ -133,20 +146,23 @@ export default function AdminProductsPage() {
   };
 
   const handleEditClick = (product: AdminProduct) => {
-    setFormMode("edit");
-    setEditingId(product._id);
-    setForm({
-      name: product.name ?? "",
-      price: product.price != null ? String(product.price) : "",
-      stock: product.stock != null ? String(product.stock) : "",
-      categoryId: product.category?._id ?? "",
-      images: product.images ?? [],       
-      isActive: product.isActive ?? true
-    });
-    setShowForm(true);
-    setSuccess(null);
-    setError(null);
-  };
+  setFormMode("edit");
+  setEditingId(product._id);
+  setForm({
+    name: product.name ?? "",
+    price: product.price != null ? String(product.price) : "",
+    stock: product.stock != null ? String(product.stock) : "",
+    categoryId: product.category?._id ?? "",
+    images: product.images ?? [],
+    isActive: product.isActive ?? true,
+    optionsJson: product.options
+      ? JSON.stringify(product.options, null, 2)
+      : ""
+  });
+  setShowForm(true);
+  setSuccess(null);
+  setError(null);
+};
 
   const handleDelete = async (id: string) => {
     if (!API_BASE_URL) return;
@@ -240,32 +256,50 @@ export default function AdminProductsPage() {
   };
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!API_BASE_URL) return;
+  e.preventDefault();
+  if (!API_BASE_URL) return;
 
-    setError(null);
-    setSuccess(null);
+  setError(null);
+  setSuccess(null);
 
-    if (!form.name || !form.price || !form.stock) {
-      setError("Name, price and stock are required.");
+  if (!form.name || !form.price || !form.stock) {
+    setError("Name, price and stock are required.");
+    return;
+  }
+
+  let options: ProductOption[] | undefined = undefined;
+  if (form.optionsJson.trim()) {
+    try {
+      const parsed = JSON.parse(form.optionsJson);
+      if (!Array.isArray(parsed)) {
+        throw new Error("Options JSON must be an array.");
+      }
+      options = parsed;
+    } catch (err: any) {
+      setError(
+        "Invalid options JSON: " +
+          (err?.message || "Please provide a valid JSON array.")
+      );
       return;
     }
+  }
 
-    const slug = form.name
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9\s-]/g, "")
-      .replace(/\s+/g, "-");
+  const slug = form.name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-");
 
-    const payload = {
-      name: form.name,
-      slug,
-      categoryId: form.categoryId || null,
-      price: Number(form.price),
-      stock: Number(form.stock),
-      isActive: form.isActive,
-      images: form.images 
-    };
+  const payload = {
+    name: form.name,
+    slug,
+    categoryId: form.categoryId || null,
+    price: Number(form.price),
+    stock: Number(form.stock),
+    isActive: form.isActive,
+    images: form.images,
+    ...(options ? { options } : {})
+  };
 
     try {
       setLoading(true);
@@ -557,7 +591,40 @@ export default function AdminProductsPage() {
                 )}
               </div>
             </div>
-
+              <div className="space-y-1 md:col-span-2">
+  <label className="text-xs text-slate-300">
+    Product options (optional, JSON – e.g. Color / Storage)
+  </label>
+  <textarea
+    rows={6}
+    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-400 font-mono"
+    value={form.optionsJson}
+    onChange={(e) =>
+      setForm((prev) => ({ ...prev, optionsJson: e.target.value }))
+    }
+    placeholder={`[
+  {
+    "name": "Color",
+    "values": [
+      { "value": "Black" },
+      { "value": "Silver" }
+    ]
+  },
+  {
+    "name": "Storage",
+    "values": [
+      { "value": "128GB", "priceDelta": 0 },
+      { "value": "256GB", "priceDelta": 100 }
+    ]
+  }
+]`}
+  />
+  <p className="text-[10px] text-slate-500">
+    Leave empty if the product has no options. If used, this should be a JSON array of
+    objects with <code>name</code> and <code>values</code> (each value may have an optional{" "}
+    <code>priceDelta</code>).
+  </p>
+</div>
             <div className="flex items-center gap-2 md:col-span-2">
               <input
                 id="isActive"

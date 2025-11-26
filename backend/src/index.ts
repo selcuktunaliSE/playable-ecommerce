@@ -14,6 +14,7 @@ import adminUploadRoutes from "./routes/adminUpload";
 import path from "path";
 import adminDashboardRoutes from "./routes/adminDashboard";
 import adminOrderRoutes from "./routes/adminOrders"
+import adminCustomerRoutes from "./routes/adminCustomers"
 
 
 import authRoutes from "./routes/auth";
@@ -39,7 +40,20 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin:true,
+    origin: (origin, callback) => {
+     if (!origin) return callback(null, true);
+
+      const allowedExact = ["http://localhost:3000"];
+      const isExactAllowed = allowedExact.includes(origin);
+      const isVercel = origin.endsWith(".vercel.app");
+
+      if (isExactAllowed || isVercel) {
+        return callback(null, true);
+      }
+
+      console.log("❌ Blocked by CORS:", origin);
+      return callback(new Error("Not allowed by CORS"), false);
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS","PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -62,6 +76,7 @@ app.use("/api/admin/categories",adminCategoryRoutes)
 app.use("/api/admin/upload", adminUploadRoutes);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
 app.use("/api/admin/orders",adminOrderRoutes)
+app.use("/api/admin/customers",adminCustomerRoutes)
 
 async function start() {
   try {

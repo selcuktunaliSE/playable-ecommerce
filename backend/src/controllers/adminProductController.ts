@@ -51,7 +51,8 @@ export const createProduct = async (req: Request, res: Response) => {
       stock,
       description,
       images,
-      isActive
+      isActive,
+      options
     } = req.body as {
       name: string;
       slug: string;
@@ -61,6 +62,7 @@ export const createProduct = async (req: Request, res: Response) => {
       description?: string;
       images?: string[];
       isActive?: boolean;
+      options?: any;
     };
 
     if (!name || !slug || !categoryId || price == null || stock == null) {
@@ -82,7 +84,10 @@ export const createProduct = async (req: Request, res: Response) => {
       stock,
       description: description ?? "",
       images: images ?? [],
-      isActive: isActive ?? true
+      isActive: isActive ?? true,
+      ...(Array.isArray(options) && options.length > 0
+        ? { options }
+        : {})
     });
 
     res.status(201).json(product);
@@ -103,7 +108,8 @@ export const updateProduct = async (req: Request, res: Response) => {
       stock,
       description,
       images,
-      isActive
+      isActive,
+      options
     } = req.body as {
       name?: string;
       slug?: string;
@@ -113,6 +119,7 @@ export const updateProduct = async (req: Request, res: Response) => {
       description?: string;
       images?: string[];
       isActive?: boolean;
+      options?: any;
     };
 
     const updateData: any = {};
@@ -125,6 +132,14 @@ export const updateProduct = async (req: Request, res: Response) => {
     if (description !== undefined) updateData.description = description;
     if (images !== undefined) updateData.images = images;
     if (isActive !== undefined) updateData.isActive = isActive;
+
+    if (options !== undefined) {
+      if (Array.isArray(options) && options.length > 0) {
+        updateData.options = options;
+      } else {
+        updateData.options = undefined;
+      }
+    }
 
     const product = await Product.findByIdAndUpdate(id, updateData, {
       new: true

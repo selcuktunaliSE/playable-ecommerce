@@ -4,13 +4,25 @@ import { useState } from "react";
 import { useCart } from "@/contexts/cart-context";
 import { useToast } from "@/contexts/toast-context";
 
+type ProductOptionValue = {
+  value: string;
+  priceDelta?: number; 
+};
+
+type ProductOptionDefinition = {
+  name: string; 
+  values: ProductOptionValue[];
+};
+
 type ProductAddToCartProps = {
   productId: string;
   name: string;
-  price: number;
+  price: number; 
   image?: string;
-  stock?: number; 
+  stock?: number;
   variant?: "product" | "card";
+  optionsConfig?: ProductOptionDefinition[];
+  basePrice?: number;
 };
 
 export function ProductAddToCart({
@@ -19,20 +31,44 @@ export function ProductAddToCart({
   price,
   image,
   stock,
-  variant = "product"
+  variant = "product",
+  optionsConfig,
+  basePrice
 }: ProductAddToCartProps) {
   const { addItem } = useCart();
   const { addToast } = useToast();
 
   const [quantity, setQuantity] = useState(1);
 
+  // Opsiyon seçimi
+  const [selectedOptions, setSelectedOptions] = useState<
+    Record<string, string>
+  >(() => {
+    const initial: Record<string, string> = {};
+    if (optionsConfig && Array.isArray(optionsConfig)) {
+      optionsConfig.forEach((opt) => {
+        if (opt.values && opt.values.length > 0) {
+          initial[opt.name] = opt.values[0].value;
+        }
+      });
+    }
+    return initial;
+  });
+
   const isOutOfStock = stock !== undefined && stock <= 0;
   const maxQty = stock ?? Infinity;
 
-  const clampedQty = Math.max(
-    1,
-    Math.min(quantity, maxQty)
-  );
+  const clampedQty = Math.max(1, Math.min(quantity, maxQty));
+
+  const effectiveBasePrice = basePrice ?? price;
+
+  const optionPriceDelta = (optionsConfig ?? []).reduce((sum, opt) => {
+    const selectedValue = selectedOptions[opt.name];
+    const match = opt.values.find((v) => v.value === selectedValue);
+    return sum + (match?.priceDelta ?? 0);
+  }, 0);
+
+  const finalUnitPrice = effectiveBasePrice + optionPriceDelta;
 
   const handleAdd = () => {
     if (isOutOfStock) {
@@ -42,7 +78,37 @@ export function ProductAddToCart({
 
     if (clampedQty <= 0) return;
 
-    addItem({ productId, name, price, image }, clampedQty);
+    const normalizedOptions =
+      (optionsConfig ?? [])
+        .map((opt) => {
+          const selectedValue = selectedOptions[opt.name];
+          if (!selectedValue) return null;
+          const match = opt.values.find((v) => v.value === selectedValue);
+          return {
+            name: opt.name,
+            value: selectedValue,
+            priceDelta: match?.priceDelta ?? 0
+          };
+        })
+        .filter(Boolean) as Array<{
+        name: string;
+        value: string;
+        priceDelta: number;
+      }>;
+
+    // Tipi bozmamak için önce basic payload oluşturup sonra options ekliyoruz.
+    const itemPayload: any = {
+      productId,
+      name,
+      price: finalUnitPrice,
+      image
+    };
+
+    if (normalizedOptions.length > 0) {
+      itemPayload.options = normalizedOptions;
+    }
+
+    addItem(itemPayload, clampedQty);
 
     addToast(`${clampedQty} × ${name} added to cart`, "success");
   };
@@ -59,6 +125,7 @@ export function ProductAddToCart({
     setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
   };
 
+  // 🧩 CARD VARIANT (listing kartlarındaki minik buton)
   if (variant === "card") {
     return (
       <div className="mt-3 space-y-1">
@@ -117,28 +184,71 @@ export function ProductAddToCart({
     );
   }
 
+  // 🧩 PRODUCT VARIANT (ürün detay sayfasındaki büyük buton)
   return (
-    <div className="flex items-center gap-3 mt-4">
-      <input
-        type="number"
-        min={1}
-        value={clampedQty}
-        onChange={(e) => {
-          const value = Number(e.target.value);
-          if (Number.isNaN(value)) return;
+    <div className="space-y-3 mt-4">
+      {/* Opsiyon seçiciler (sadece optionsConfig varsa göster) */}
+      {optionsConfig && optionsConfig.length > 0 && (
+        <div className="space-y-2">
+          {optionsConfig.map((opt) => (
+            <div key={opt.name} className="space-y-1">
+              <label className="text-xs text-slate-300">
+                {opt.name.charAt(0).toUpperCase() + opt.name.slice(1)}
+              </label>
+              <select
+                value={selectedOptions[opt.name] ?? ""}
+                onChange={(e) =>
+                  setSelectedOptions((prev) => ({
+                    ...prev,
+                    [opt.name]: e.target.value
+                  }))
+                }
+                className="w-full md:w-64 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-orange-400"
+              >
+                {opt.values.map((v) => (
+                  <option key={v.value} value={v.value}>
+                    {v.value}
+                    {typeof v.priceDelta === "number" && v.priceDelta !== 0
+                      ? v.priceDelta > 0
+                        ? ` (+$${v.priceDelta})`
+                        : ` (-$${Math.abs(v.priceDelta)})`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
 
-          let next = value;
-          if (next < 1) next = 1;
-          if (stock !== undefined && next > stock) next = stock;
-          setQuantity(next);
-        }}
-        className="w-16 bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-sm focus:outline-none focus:border-orange-500"
-      />
-      <button
-        type="button"
-        onClick={handleAdd}
-        disabled={isOutOfStock}
-        className="
+          <p className="text-xs text-slate-400">
+            Price:{" "}
+            <span className="text-slate-100 font-semibold">
+              ${finalUnitPrice.toFixed(2)}
+            </span>
+          </p>
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        <input
+          type="number"
+          min={1}
+          value={clampedQty}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            if (Number.isNaN(value)) return;
+
+            let next = value;
+            if (next < 1) next = 1;
+            if (stock !== undefined && next > stock) next = stock;
+            setQuantity(next);
+          }}
+          className="w-16 bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-sm focus:outline-none focus:border-orange-500"
+        />
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={isOutOfStock}
+          className="
           w-full md:w-auto px-6 py-2.5 rounded-full
           bg-orange-500 text-sm font-semibold text-slate-950
           shadow-sm
@@ -149,9 +259,10 @@ export function ProductAddToCart({
           cursor-pointer
           transition-transform transition-shadow duration-150
         "
-      > 
-        {isOutOfStock ? "Out of stock" : "Add to cart"}
-      </button>
+        >
+          {isOutOfStock ? "Out of stock" : "Add to cart"}
+        </button>
+      </div>
     </div>
   );
 }

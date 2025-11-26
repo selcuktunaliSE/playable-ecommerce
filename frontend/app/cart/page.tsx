@@ -73,6 +73,20 @@ export default function CartPage() {
                     <h2 className="text-sm font-semibold text-slate-50">
                       {item.name}
                     </h2>
+                    
+                    {item.options && item.options.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-1.5 mb-0.5">
+                        {item.options.map((opt: any, idx: number) => (
+                          <span 
+                            key={idx} 
+                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700"
+                          >
+                            {opt.name}: <span className="text-slate-200 ml-1">{opt.value}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     <p className="text-xs text-slate-400 mt-0.5">
                       ${Number(item.price).toFixed(2)} each
                     </p>
@@ -120,7 +134,6 @@ export default function CartPage() {
           ))}
         </div>
 
-        {/* Summary */}
         <aside className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3 self-start">
           <h2 className="text-sm font-semibold text-slate-50">
             Order summary

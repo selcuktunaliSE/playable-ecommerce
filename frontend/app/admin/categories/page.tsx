@@ -9,7 +9,6 @@ type AdminCategory = {
   _id: string;
   name: string;
   slug: string;
-  description?: string;
   isActive?: boolean;
 };
 
@@ -22,7 +21,6 @@ export default function AdminCategoriesPage() {
   const [form, setForm] = useState({
     name: "",
     slug: "",
-    description: "",
     isActive: true
   });
 
@@ -61,7 +59,6 @@ export default function AdminCategoriesPage() {
     setForm({
       name: "",
       slug: "",
-      description: "",
       isActive: true
     });
   };
@@ -81,7 +78,6 @@ export default function AdminCategoriesPage() {
       const body = {
         name: form.name,
         slug: form.slug,
-        description: form.description,
         isActive: form.isActive
       };
 
@@ -118,7 +114,6 @@ export default function AdminCategoriesPage() {
     setForm({
       name: cat.name || "",
       slug: cat.slug || "",
-      description: cat.description || "",
       isActive: cat.isActive ?? true
     });
   };
@@ -224,17 +219,7 @@ export default function AdminCategoriesPage() {
             />
           </div>
 
-          <div className="md:col-span-2 space-y-1">
-            <label className="text-xs text-slate-300">Description</label>
-            <textarea
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-orange-400 min-h-[60px]"
-              value={form.description}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, description: e.target.value }))
-              }
-              placeholder="Optional description for internal use or SEO."
-            />
-          </div>
+         
 
           <div className="flex items-center gap-2 mt-1">
             <input
@@ -283,7 +268,6 @@ export default function AdminCategoriesPage() {
               <tr className="border-b border-slate-800">
                 <th className="px-3 py-2 text-left">Name</th>
                 <th className="px-3 py-2 text-left">Slug</th>
-                <th className="px-3 py-2 text-left">Description</th>
                 <th className="px-3 py-2 text-center">Active</th>
                 <th className="px-3 py-2 text-right">Actions</th>
               </tr>
@@ -299,11 +283,6 @@ export default function AdminCategoriesPage() {
                   </td>
                   <td className="px-3 py-2 align-middle text-slate-300">
                     {cat.slug}
-                  </td>
-                  <td className="px-3 py-2 align-middle text-slate-400 max-w-[280px]">
-                    <span className="line-clamp-2">
-                      {cat.description || "-"}
-                    </span>
                   </td>
                   <td className="px-3 py-2 align-middle text-center">
                     <span

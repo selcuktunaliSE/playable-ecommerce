@@ -55,6 +55,8 @@ type DashboardResponse = {
   orderStatusCounts: StatusCount[];
 };
 
+const SALES_ITEMS_PER_PAGE = 6;
+
 export default function AdminDashboardPage() {
   const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -63,6 +65,7 @@ export default function AdminDashboardPage() {
   const [range, setRange] = useState<RangeKey>("7d");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [salesPage, setSalesPage] = useState(1);
 
   const fetchDashboard = async (selectedRange: RangeKey = range) => {
     if (!API_BASE_URL) {
@@ -124,6 +127,10 @@ export default function AdminDashboardPage() {
     fetchDashboard(range);
   }, [authLoading, user, token, range]);
 
+  useEffect(() => {
+    setSalesPage(1);
+  }, [range]);
+
   if (!user || user.role !== "admin") {
     return null;
   }
@@ -147,6 +154,13 @@ export default function AdminDashboardPage() {
 
   const rangeLabel =
     RANGE_OPTIONS.find((o) => o.key === range)?.label ?? "Selected period";
+
+  const allSalesData = data?.salesByDate || [];
+  const totalSalesPages = Math.ceil(allSalesData.length / SALES_ITEMS_PER_PAGE);
+  const currentSalesData = allSalesData.slice(
+    (salesPage - 1) * SALES_ITEMS_PER_PAGE,
+    salesPage * SALES_ITEMS_PER_PAGE
+  );
 
   return (
     <div className="space-y-6">
@@ -212,12 +226,18 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-          <p className="text-xs text-slate-400">Customers</p>
+        <Link 
+          href="/admin/customers"
+          className="block rounded-2xl border border-slate-800 bg-slate-950/70 p-4 hover:bg-slate-900 hover:border-slate-700 transition group"
+        >
+          <div className="flex justify-between items-start">
+            <p className="text-xs text-slate-400 group-hover:text-orange-300 transition-colors">Customers</p>
+            <span className="text-[10px] text-slate-500">View all →</span>
+          </div>
           <p className="mt-2 text-xl font-semibold text-slate-50">
             {stats?.customerCount ?? "—"}
           </p>
-        </div>
+        </Link>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
           <p className="text-xs text-slate-400">Pending orders</p>
@@ -228,39 +248,67 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 space-y-3">
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 space-y-3 flex flex-col">
           <h2 className="text-sm font-semibold text-slate-100">
             Sales ({rangeLabel.toLowerCase()})
           </h2>
-          {(!data || data.salesByDate.length === 0) && (
-            <p className="text-xs text-slate-500">No sales data yet.</p>
-          )}
-          <div className="space-y-2">
-            {data?.salesByDate.map((d) => (
-              <div
-                key={d.date}
-                className="flex items-center gap-2 text-xs"
-              >
-                <span className="w-20 text-slate-400">
-                  {new Date(d.date).toLocaleDateString()}
-                </span>
-                <div className="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
+          
+          <div className="flex-1">
+            {(!data || data.salesByDate.length === 0) ? (
+              <p className="text-xs text-slate-500">No sales data yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {currentSalesData.map((d) => (
                   <div
-                    className="h-full rounded-full bg-orange-500"
-                    style={{
-                      width:
-                        maxSales > 0
-                          ? `${(d.total / maxSales) * 100}%`
-                          : "0%"
-                    }}
-                  />
-                </div>
-                <span className="w-16 text-right text-slate-300 text-[11px]">
-                  ${d.total.toFixed(0)}
-                </span>
+                    key={d.date}
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <span className="w-20 text-slate-400">
+                      {new Date(d.date).toLocaleDateString()}
+                    </span>
+                    <div className="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-orange-500 transition-all duration-500"
+                        style={{
+                          width:
+                            maxSales > 0
+                              ? `${(d.total / maxSales) * 100}%`
+                              : "0%"
+                        }}
+                      />
+                    </div>
+                    <span className="w-16 text-right text-slate-300 text-[11px]">
+                      ${d.total.toFixed(0)}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
+
+          {totalSalesPages > 1 && (
+            <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setSalesPage((p) => Math.max(1, p - 1))}
+                disabled={salesPage === 1}
+                className="px-2 py-1 rounded hover:bg-slate-900 text-[10px] text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition"
+              >
+                ← Prev
+              </button>
+              <span className="text-[10px] text-slate-500">
+                Page {salesPage} of {totalSalesPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSalesPage((p) => Math.min(totalSalesPages, p + 1))}
+                disabled={salesPage === totalSalesPages}
+                className="px-2 py-1 rounded hover:bg-slate-900 text-[10px] text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition"
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 space-y-3">
@@ -340,7 +388,6 @@ export default function AdminDashboardPage() {
                     <td className="px-2 py-1 align-middle text-slate-200">
                       <div className="flex flex-col">
                         {o.userId ? (
-                          
                           <Link
                             href={`/admin/customers/${o.userId}`}
                             className="hover:text-orange-300 hover:underline underline-offset-2 cursor-pointer"

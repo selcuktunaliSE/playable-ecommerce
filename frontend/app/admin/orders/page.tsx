@@ -49,6 +49,17 @@ const STATUS_LABELS: Record<AdminOrder["status"], string> = {
   cancelled: "Cancelled"
 };
 
+type StatusFilter = AdminOrder["status"] | "all";
+
+const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: "all", label: "All statuses" },
+  { value: "pending", label: STATUS_LABELS.pending },
+  { value: "processing", label: STATUS_LABELS.processing },
+  { value: "shipped", label: STATUS_LABELS.shipped },
+  { value: "delivered", label: STATUS_LABELS.delivered },
+  { value: "cancelled", label: STATUS_LABELS.cancelled }
+];
+
 function statusBadgeClass(status: AdminOrder["status"]) {
   switch (status) {
     case "pending":
@@ -76,25 +87,39 @@ export default function AdminOrdersPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
-  // 🔹 Pagination
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
 
-  const totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
+  const filteredOrders =
+    statusFilter === "all"
+      ? orders
+      : orders.filter((o) => o.status === statusFilter);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredOrders.length / PAGE_SIZE)
+  );
   const startIndex = (page - 1) * PAGE_SIZE;
   const endIndex = startIndex + PAGE_SIZE;
-  const paginatedOrders = orders.slice(startIndex, endIndex);
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
 
-  // orders değişince sayfa aralığını koru
   useEffect(() => {
-    const newTotalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
+    const relevant = statusFilter === "all"
+      ? orders
+      : orders.filter((o) => o.status === statusFilter);
+
+    const newTotalPages = Math.max(
+      1,
+      Math.ceil(relevant.length / PAGE_SIZE)
+    );
     if (page > newTotalPages) {
       setPage(newTotalPages);
       setExpandedOrderId(null);
     }
-  }, [orders, page]);
+  }, [orders, page, statusFilter]);
 
-  // guard
   useEffect(() => {
     if (!loading) {
       if (!user) {
@@ -105,7 +130,6 @@ export default function AdminOrdersPage() {
     }
   }, [user, loading, router]);
 
-  // fetch orders
   useEffect(() => {
     if (!token || !API_BASE_URL) return;
 
@@ -125,7 +149,7 @@ export default function AdminOrdersPage() {
 
         const data = (await res.json()) as AdminOrder[];
         setOrders(data);
-        setPage(1); // yeni fetch’te başa dön
+        setPage(1); 
         setExpandedOrderId(null);
       } catch (err: any) {
         addToast(err.message || "Failed to load orders", "error");
@@ -204,17 +228,43 @@ export default function AdminOrdersPage() {
             Manage all orders from a single place.
           </p>
         </div>
-        {orders.length > 0 && (
-          <span className="text-[11px] px-3 py-1 rounded-full bg-slate-900 border border-slate-700 text-slate-200">
-            {orders.length} order{orders.length !== 1 ? "s" : ""}
-          </span>
-        )}
+
+        <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-slate-400">Filter:</span>
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                const val = e.target.value as StatusFilter;
+                setStatusFilter(val);
+                setPage(1);
+                setExpandedOrderId(null);
+              }}
+              className="text-[11px] rounded-full bg-slate-900 border border-slate-700 px-2 py-1 text-slate-100 focus:outline-none focus:ring-2 focus:ring-orange-400"
+            >
+              {STATUS_FILTER_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {orders.length > 0 && (
+            <span className="text-[11px] px-3 py-1 rounded-full bg-slate-900 border border-slate-700 text-slate-200">
+              {orders.length} order{orders.length !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
       </div>
 
       {loadingOrders ? (
         <p className="text-sm text-slate-400">Loading orders…</p>
-      ) : orders.length === 0 ? (
-        <p className="text-sm text-slate-400">No orders yet.</p>
+      ) : filteredOrders.length === 0 ? (
+        <p className="text-sm text-slate-400">
+          No orders for the selected status.
+        </p>
       ) : (
         <>
           <div className="space-y-3">
@@ -231,7 +281,6 @@ export default function AdminOrdersPage() {
                   key={o._id}
                   className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 md:p-5 space-y-3 hover:border-slate-600/80 hover:bg-slate-900 transition-shadow shadow-sm hover:shadow-md"
                 >
-                  {/* Top row */}
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -333,10 +382,8 @@ export default function AdminOrdersPage() {
                     </div>
                   </div>
 
-                  {/* Expanded details */}
                   {isExpanded && (
                     <div className="border-t border-slate-800 pt-3 mt-1 grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)]">
-                      {/* Items */}
                       <div className="space-y-2">
                         <p className="text-xs font-semibold text-slate-200">
                           Items
@@ -363,7 +410,7 @@ export default function AdminOrdersPage() {
                                       {item.name}
                                     </p>
                                     <p className="text-[11px] text-slate-400">
-                                      Qty: {item.quantity}
+                                      Quantity: {item.quantity}
                                     </p>
                                   </div>
                                 </div>
@@ -389,7 +436,6 @@ export default function AdminOrdersPage() {
                         </div>
                       </div>
 
-                      {/* Shipping */}
                       <div className="space-y-2">
                         <p className="text-xs font-semibold text-slate-200">
                           Shipping address
@@ -434,18 +480,17 @@ export default function AdminOrdersPage() {
             })}
           </div>
 
-          {/* 🔹 Pagination controls */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-2 border-t border-slate-800 mt-4">
               <p className="text-[11px] text-slate-400">
                 Showing{" "}
                 <span className="text-slate-200">
-                  {orders.length === 0 ? 0 : startIndex + 1}–
-                  {Math.min(endIndex, orders.length)}
+                  {filteredOrders.length === 0 ? 0 : startIndex + 1}–
+                  {Math.min(endIndex, filteredOrders.length)}
                 </span>{" "}
                 of{" "}
                 <span className="text-slate-200">
-                  {orders.length}
+                  {filteredOrders.length}
                 </span>{" "}
                 orders
               </p>

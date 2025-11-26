@@ -26,15 +26,15 @@ export default function CheckoutPage() {
   const items = cart.items ?? cart.cartItems ?? [];
   const clearCart = cart.clearCart ?? cart.reset ?? (() => {});
   const cartTotal =
-  cart.total ??
-  cart.totalAmount ??
-  items.reduce(
-    (sum: number, item: any) =>
-      sum + Number(item.price ?? 0) * Number(item.quantity ?? 1),
-    0
-  );
+    cart.total ??
+    cart.totalAmount ??
+    items.reduce(
+      (sum: number, item: any) =>
+        sum + Number(item.price ?? 0) * Number(item.quantity ?? 1),
+      0
+    );
 
-const subtotal = Number(cartTotal) || 0;
+  const subtotal = Number(cartTotal) || 0;
 
   const [fullName, setFullName] = useState(user?.name ?? "");
   const [addressLine1, setAddressLine1] = useState("");
@@ -42,21 +42,21 @@ const subtotal = Number(cartTotal) || 0;
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("Turkiye");
+
   let shippingFee = 0;
-
-if (subtotal > 0) {
-  if (country === "Turkiye") {
-    shippingFee = 5;
-  } else if (country === "United States") {
-    shippingFee = 15;
-  } else {
-    shippingFee = 10;
+  if (subtotal > 0) {
+    if (country === "Turkiye") {
+      shippingFee = 5;
+    } else if (country === "United States") {
+      shippingFee = 15;
+    } else {
+      shippingFee = 10;
+    }
   }
-}
 
-const TAX_RATE = 0.18;
-const taxAmount = subtotal * TAX_RATE;
-const orderTotal = subtotal + shippingFee + taxAmount;
+  const TAX_RATE = 0.18;
+  const taxAmount = subtotal * TAX_RATE;
+  const orderTotal = subtotal + shippingFee + taxAmount;
 
   const [cardName, setCardName] = useState("");
   const [cardNumber, setCardNumber] = useState("");
@@ -177,7 +177,8 @@ const orderTotal = subtotal + shippingFee + taxAmount;
             productId: item.productId ?? item.id ?? item._id,
             quantity: item.quantity ?? 1,
             name: item.name,
-            image: item.image
+            image: item.image,
+            options: item.options ?? []
           })),
           shippingAddress: {
             fullName,
@@ -205,12 +206,13 @@ const orderTotal = subtotal + shippingFee + taxAmount;
       const order = await res.json();
       console.log("ORDER CREATED:", order);
 
-      const createdId = order.shortCode
+      const createdId = order.shortCode;
       setOrderId(createdId ?? null);
 
       clearCart();
-      setSuccess("Your order has been placed successfully. Your order ID is below.");
-      
+      setSuccess(
+        "Your order has been placed successfully. Your order ID is below."
+      );
     } catch (err: any) {
       console.error("Order error:", err);
       setError(err?.message || "Something went wrong.");
@@ -230,9 +232,7 @@ const orderTotal = subtotal + shippingFee + taxAmount;
           onSubmit={handleSubmit}
           className="md:col-span-2 space-y-4 bg-slate-900/70 border border-slate-800 rounded-2xl p-6"
         >
-          <h2 className="text-lg font-semibold mb-2">
-            Shipping address
-          </h2>
+          <h2 className="text-lg font-semibold mb-2">Shipping address</h2>
 
           <div className="space-y-1">
             <label className="text-xs text-slate-300">Full name</label>
@@ -292,21 +292,20 @@ const orderTotal = subtotal + shippingFee + taxAmount;
             </div>
 
             <div className="space-y-1">
-            <label className="text-xs text-slate-300">Country</label>
-            <select
-              required
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-orange-400"
-            >
-              <option value="Turkiye">Türkiye</option>
-              <option value="Germany">Germany</option>
-              <option value="United Kingdom">United Kingdom</option>
-              <option value="United States">United States</option>
-              <option value="France">France</option>
-            </select>
-          </div>
-
+              <label className="text-xs text-slate-300">Country</label>
+              <select
+                required
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-orange-400"
+              >
+                <option value="Turkiye">Türkiye</option>
+                <option value="Germany">Germany</option>
+                <option value="United Kingdom">United Kingdom</option>
+                <option value="United States">United States</option>
+                <option value="France">France</option>
+              </select>
+            </div>
           </div>
 
           <div className="pt-3 mt-3 border-t border-slate-800 space-y-2">
@@ -315,9 +314,7 @@ const orderTotal = subtotal + shippingFee + taxAmount;
             </h3>
 
             <div className="space-y-1">
-              <label className="text-xs text-slate-300">
-                Name on card
-              </label>
+              <label className="text-xs text-slate-300">Name on card</label>
               <input
                 type="text"
                 className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-400"
@@ -328,9 +325,7 @@ const orderTotal = subtotal + shippingFee + taxAmount;
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-slate-300">
-                Card number
-              </label>
+              <label className="text-xs text-slate-300">Card number</label>
               <input
                 type="text"
                 inputMode="numeric"
@@ -357,17 +352,13 @@ const orderTotal = subtotal + shippingFee + taxAmount;
                   className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-400"
                   placeholder="12/28"
                   value={expiry}
-                  onChange={(e) =>
-                    setExpiry(formatExpiry(e.target.value))
-                  }
+                  onChange={(e) => setExpiry(formatExpiry(e.target.value))}
                   maxLength={5}
                   required
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-300">
-                  CVC
-                </label>
+                <label className="text-xs text-slate-300">CVC</label>
                 <input
                   type="password"
                   inputMode="numeric"
@@ -376,7 +367,9 @@ const orderTotal = subtotal + shippingFee + taxAmount;
                   placeholder="123"
                   value={cvc}
                   onChange={(e) => {
-                    const digits = e.target.value.replace(/\D/g, "").slice(0, 3);
+                    const digits = e.target.value
+                      .replace(/\D/g, "")
+                      .slice(0, 3);
                     setCvc(digits);
                   }}
                   maxLength={3}
@@ -436,25 +429,35 @@ const orderTotal = subtotal + shippingFee + taxAmount;
           <h2 className="text-lg font-semibold">Order summary</h2>
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
             {items.length === 0 ? (
-              <p className="text-xs text-slate-400">
-                Your cart is empty.
-              </p>
+              <p className="text-xs text-slate-400">Your cart is empty.</p>
             ) : (
               items.map((item: any) => (
                 <div
                   key={item.productId ?? item.id ?? item._id}
-                  className="flex justify-between text-xs text-slate-200"
+                  className="flex flex-col gap-0.5 text-xs text-slate-200"
                 >
-                  <span className="line-clamp-1">
-                    {item.name} × {item.quantity ?? 1}
-                  </span>
-                  <span>
-                    $
-                    {(
-                      Number(item.price ?? 0) *
-                      Number(item.quantity ?? 1)
-                    ).toFixed(2)}
-                  </span>
+                  <div className="flex justify-between">
+                    <span className="line-clamp-1">
+                      {item.name} × {item.quantity ?? 1}
+                    </span>
+                    <span>
+                      $
+                      {(
+                        Number(item.price ?? 0) *
+                        Number(item.quantity ?? 1)
+                      ).toFixed(2)}
+                    </span>
+                  </div>
+
+                  {item.options && item.options.length > 0 && (
+                    <div className="flex flex-wrap gap-1 text-[11px] text-slate-400 mt-0.5">
+                      {item.options.map((o: any, i: number) => (
+                         <span key={i}>
+                           {o.name}: {o.value}{i < item.options.length - 1 ? " • " : ""}
+                         </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -467,7 +470,9 @@ const orderTotal = subtotal + shippingFee + taxAmount;
             </div>
             <div className="flex justify-between text-slate-200">
               <span>Shipping</span>
-              <span>{shippingFee > 0 ? `$${shippingFee.toFixed(2)}` : "$0.00"}</span>
+              <span>
+                {shippingFee > 0 ? `$${shippingFee.toFixed(2)}` : "$0.00"}
+              </span>
             </div>
             <div className="flex justify-between text-slate-200">
               <span>Tax (18%)</span>
@@ -479,16 +484,14 @@ const orderTotal = subtotal + shippingFee + taxAmount;
             </div>
           </div>
 
-         <p className="text-[11px] text-slate-500">
-        Shipping fees are estimated based on your selected country
-        ($5 for Türkiye, $10 for EU countries,
-        and $15 for the United States)
-
-        </p>
-         <p className="text-[11px] text-slate-500">
-        This is a demo checkout – a valid-looking card number will simulate
-        a successful payment.
-         </p>
+          <p className="text-[11px] text-slate-500">
+            Shipping fees are estimated based on your selected country ($5 for
+            Türkiye, $10 for EU countries, and $15 for the United States)
+          </p>
+          <p className="text-[11px] text-slate-500">
+            This is a demo checkout – a valid-looking card number will simulate
+            a successful payment.
+          </p>
         </aside>
       </div>
     </div>

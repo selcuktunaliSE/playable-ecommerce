@@ -8,8 +8,6 @@ import {
   ReactNode
 } from "react";
 
-import { useAuth } from "@/contexts/auth-context";
-
 export type CartItem = {
   productId: string;
   name: string;
@@ -34,45 +32,37 @@ const STORAGE_KEY = "playable_cart_v1";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
-  const { user } = useAuth();
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     try {
-      if (typeof window === "undefined") return;
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          setItems(parsed);
+      if (typeof window !== "undefined") {
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            setItems(parsed);
+          }
         }
       }
     } catch (err) {
       console.warn("Failed to load cart from storage", err);
+    } finally {
+      setIsInitialized(true);
     }
   }, []);
 
   useEffect(() => {
+    if (!isInitialized) return;
+
     try {
-      if (typeof window === "undefined") return;
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      }
     } catch (err) {
       console.warn("Failed to save cart to storage", err);
     }
-  }, [items]);
-
-    useEffect(() => {
-    if (!user) {
-      setItems([]);
-      try {
-        if (typeof window !== "undefined") {
-          window.localStorage.removeItem(STORAGE_KEY);
-        }
-      } catch (err) {
-        console.warn("Failed to clear cart on logout", err);
-      }
-    }
-  }, [user]);
-
+  }, [items, isInitialized]);
 
   const addItem = (
     item: Omit<CartItem, "quantity">,
@@ -106,7 +96,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems((prev) => prev.filter((i) => i.productId !== productId));
   };
 
-  const clearCart = () => setItems([]);
+  const clearCart = () => {
+    setItems([]);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
+  };
 
   const totalQuantity = items.reduce((sum, i) => sum + i.quantity, 0);
   const totalAmount = items.reduce(

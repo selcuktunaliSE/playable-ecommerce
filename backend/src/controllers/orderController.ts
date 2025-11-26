@@ -21,6 +21,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         quantity?: number;
         name?: string;
         image?: string;
+        options?: { name: string; value: string }[]; // ⭐ seçilen opsiyonlar
       }>;
       shippingAddress: {
         fullName: string;
@@ -116,17 +117,40 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       if (!product) continue;
 
       const quantity = Number(item.quantity ?? 1);
-      const price = Number(product.price ?? 0);
+      const basePrice = Number(product.price ?? 0);
+
+      let optionPriceDeltaTotal = 0;
+      const selectedOptions = Array.isArray(item.options) ? item.options : [];
+      const productOptions = Array.isArray((product as any).options)
+        ? (product as any).options
+        : [];
+
+      for (const selected of selectedOptions) {
+        const optDef = productOptions.find(
+          (o: any) => o.name === selected.name
+        );
+        if (!optDef || !Array.isArray(optDef.values)) continue;
+
+        const valDef = optDef.values.find(
+          (v: any) => v.value === selected.value
+        );
+        if (!valDef) continue;
+
+        optionPriceDeltaTotal += Number(valDef.priceDelta ?? 0);
+      }
+
+      const finalPrice = basePrice + optionPriceDeltaTotal;
 
       orderItems.push({
         product: product._id,
         name: item.name || product.name,
-        price,
+        price: finalPrice,
         quantity,
-        image: item.image || product.images?.[0]
+        image: item.image || product.images?.[0],
+        options: selectedOptions.length > 0 ? selectedOptions : undefined
       });
 
-      totalAmount += price * quantity;
+      totalAmount += finalPrice * quantity;
     }
 
     if (orderItems.length === 0) {
@@ -135,6 +159,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         .json({ message: "No valid products found in cart" });
     }
 
+    // Stok kontrolü
     for (const oi of orderItems) {
       const p = productMap.get(oi.product.toString());
       const currentStock = Number((p as any)?.stock ?? 0);
@@ -146,6 +171,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    // Stok düş
     for (const oi of orderItems) {
       await Product.updateOne(
         { _id: oi.product },
@@ -157,7 +183,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       items: orderItems,
       shippingAddress,
       paymentStatus: "paid",
-      status: "pending",    
+      status: "pending",
       totalAmount,
       paymentInfo: {
         method: "card",
@@ -243,7 +269,7 @@ export const getOrderById = async (req: AuthRequest, res: Response) => {
 export const publicTrackOrder = async (req: Request, res: Response) => {
   try {
     const rawCode = String(req.params.code || "");
-    const code = rawCode.trim().replace(/^#/, "").toLowerCase(); 
+    const code = rawCode.trim().replace(/^#/, "").toLowerCase();
 
     if (!code) {
       return res.status(400).json({ message: "Order code is required" });
@@ -266,7 +292,7 @@ export const publicTrackOrder = async (req: Request, res: Response) => {
     return res.json({
       id: order._id.toString(),
       createdAt: order.createdAt,
-      shortCode:order.shortCode,
+      shortCode: order.shortCode,
       paymentStatus: order.paymentStatus,
       status: order.status || "pending",
       totalAmount: order.totalAmount,

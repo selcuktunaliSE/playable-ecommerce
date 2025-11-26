@@ -63,13 +63,13 @@ export const getAdminDashboard = async (req: Request, res: Response) => {
       statusCountsAgg
     ] = await Promise.all([
 
-      Order.countDocuments(dateMatch),
+    Order.countDocuments(dateMatch),
 
-      User.countDocuments({}),
+     User.countDocuments({ role: { $ne: "admin" } }),
 
       Order.countDocuments({
         ...dateMatch,
-        paymentStatus: "pending"
+        status: "pending"
       }),
 
       Order.aggregate([
