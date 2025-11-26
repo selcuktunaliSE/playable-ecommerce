@@ -44,8 +44,9 @@ async function run() {
     catBySlug[c.slug] = c._id;
   }
 
-  console.log("Seeding products with SALES COUNTS matching ORDERS...");
+  console.log("Seeding products (15 items)...");
   const products = await Product.insertMany([
+    // 1. Sony WH-1000XM5 (Siparişlerde: 2 adet)
     {
       name: "Sony WH-1000XM5 Wireless Noise-Cancelling Headphones",
       slug: "sony-wh-1000xm5",
@@ -62,7 +63,7 @@ async function run() {
       rating: 4.9,
       numReviews: 45,
       isActive: true,
-      salesCount: 2, // Siparişlerde toplam 2 adet var
+      salesCount: 2, 
       options: [
         {
           name: "Color",
@@ -73,6 +74,7 @@ async function run() {
         }
       ]
     },
+    // 2. Apple AirPods Pro 2 (Siparişlerde: 0 adet)
     {
       name: "Apple AirPods Pro (2nd generation) with MagSafe Case",
       slug: "apple-airpods-pro-2nd-gen",
@@ -89,9 +91,10 @@ async function run() {
       rating: 4.5,
       numReviews: 120,
       isActive: true,
-      salesCount: 0, // Hiç sipariş edilmedi
+      salesCount: 0,
       options: []
     },
+    // 3. Logitech MX Master 3S (Siparişlerde: 3+2+1 = 6 adet)
     {
       name: "Logitech MX Master 3S Wireless Mouse",
       slug: "logitech-mx-master-3s",
@@ -108,7 +111,7 @@ async function run() {
       rating: 4.7,
       numReviews: 230,
       isActive: true,
-      salesCount: 6, // (3 + 2 + 1) Toplam 6 adet satıldı
+      salesCount: 6,
       options: [
         {
           name: "Color",
@@ -119,6 +122,7 @@ async function run() {
         }
       ]
     },
+    // 4. Keychron K2 (Siparişlerde: 1 adet)
     {
       name: "Keychron K2 Wireless Mechanical Keyboard",
       slug: "keychron-k2-wireless-mechanical-keyboard",
@@ -135,7 +139,7 @@ async function run() {
       rating: 5.0,
       numReviews: 25,
       isActive: true,
-      salesCount: 1, // Toplam 1 adet
+      salesCount: 1,
       options: [
         {
           name: "Switch Type",
@@ -154,6 +158,7 @@ async function run() {
         }
       ]
     },
+    // 5. Dell XPS 13 (Siparişlerde: 1 adet)
     {
       name: 'Dell XPS 13 13.4" FHD+ Laptop',
       slug: "dell-xps-13-plus",
@@ -170,7 +175,7 @@ async function run() {
       rating: 4.2,
       numReviews: 18,
       isActive: true,
-      salesCount: 1, // Toplam 1 adet
+      salesCount: 1,
       options: [
         {
           name: "Processor",
@@ -188,6 +193,7 @@ async function run() {
         }
       ]
     },
+    // 6. MacBook Air M2 (Siparişlerde: 1 adet)
     {
       name: 'Apple MacBook Air 13" (M2 Chip)',
       slug: "macbook-air-13-m2-midnight",
@@ -204,7 +210,7 @@ async function run() {
       rating: 4.8,
       numReviews: 50,
       isActive: true,
-      salesCount: 1, // Toplam 1 adet
+      salesCount: 1,
       options: [
         {
           name: "Color",
@@ -223,6 +229,7 @@ async function run() {
         }
       ]
     },
+    // 7. Samsung Odyssey G5 (Siparişlerde: 2 adet)
     {
       name: 'Samsung Odyssey G5 27" QHD 144Hz Monitor',
       slug: "samsung-odyssey-g5-27-qhd-144hz",
@@ -239,9 +246,10 @@ async function run() {
       rating: 4.3,
       numReviews: 22,
       isActive: true,
-      salesCount: 2, // Toplam 2 adet
+      salesCount: 2,
       options: []
     },
+    // 8. iPhone 15 (Siparişlerde: 1 adet)
     {
       name: "Apple iPhone 15",
       slug: "apple-iphone-15",
@@ -258,7 +266,7 @@ async function run() {
       rating: 4.6,
       numReviews: 180,
       isActive: true,
-      salesCount: 1, // Toplam 1 adet
+      salesCount: 1,
       options: [
         {
           name: "Color",
@@ -279,6 +287,7 @@ async function run() {
         }
       ]
     },
+    // 9. Samsung S24 (Siparişlerde: 0 adet)
     {
       name: "Samsung Galaxy S24",
       slug: "samsung-galaxy-s24",
@@ -295,7 +304,7 @@ async function run() {
       rating: 4.5,
       numReviews: 90,
       isActive: true,
-      salesCount: 0, // Hiç sipariş edilmedi
+      salesCount: 0,
       options: [
         {
           name: "Color",
@@ -314,6 +323,7 @@ async function run() {
         }
       ]
     },
+    // 10. Bose QC45 (Siparişlerde: 1 adet)
     {
       name: "Bose QuietComfort 45 Wireless Headphones",
       slug: "bose-quietcomfort-45",
@@ -330,7 +340,7 @@ async function run() {
       rating: 4.4,
       numReviews: 65,
       isActive: true,
-      salesCount: 1, // Toplam 1 adet
+      salesCount: 1,
       options: [
         {
           name: "Color",
@@ -341,6 +351,7 @@ async function run() {
         }
       ]
     },
+    // 11. SteelSeries Arctis Nova 7 (Siparişlerde: 1 adet)
     {
       name: "SteelSeries Arctis Nova 7 Wireless Gaming Headset",
       slug: "steelseries-arctis-nova-7",
@@ -357,9 +368,10 @@ async function run() {
       rating: 4.1,
       numReviews: 35,
       isActive: true,
-      salesCount: 1, // Toplam 1 adet
+      salesCount: 1,
       options: []
     },
+    // 12. Samsung Galaxy Buds2 Pro (Siparişlerde: 2 adet)
     {
       name: "Samsung Galaxy Buds2 Pro",
       slug: "samsung-galaxy-buds2-pro",
@@ -376,7 +388,7 @@ async function run() {
       rating: 4.4,
       numReviews: 55,
       isActive: true,
-      salesCount: 2, // Toplam 2 adet
+      salesCount: 2,
       options: [
         {
           name: "Color",
@@ -388,6 +400,7 @@ async function run() {
         }
       ]
     },
+    // 13. Sony WF-1000XM5 (Siparişlerde: 2+1=3 adet)
     {
       name: "Sony WF-1000XM5 True Wireless Earbuds",
       slug: "sony-wf-1000xm5",
@@ -404,7 +417,7 @@ async function run() {
       rating: 4.8,
       numReviews: 40,
       isActive: true,
-      salesCount: 3, // (2 + 1) Toplam 3 adet
+      salesCount: 3,
       options: [
         {
           name: "Color",
@@ -415,6 +428,7 @@ async function run() {
         }
       ]
     },
+    // 14. Logitech G Pro X Superlight (Siparişlerde: 1 adet)
     {
       name: "Logitech G Pro X Superlight Wireless Mouse",
       slug: "logitech-g-pro-x-superlight",
@@ -431,7 +445,7 @@ async function run() {
       rating: 4.9,
       numReviews: 75,
       isActive: true,
-      salesCount: 1, // Toplam 1 adet
+      salesCount: 1,
       options: [
         {
           name: "Color",
@@ -443,6 +457,7 @@ async function run() {
         }
       ]
     },
+    // 15. Razer Huntsman Mini (Siparişlerde: 1 adet)
     {
       name: "Razer Huntsman Mini 60% Gaming Keyboard",
       slug: "razer-huntsman-mini",
@@ -459,7 +474,7 @@ async function run() {
       rating: 4.7,
       numReviews: 28,
       isActive: true,
-      salesCount: 1, // Toplam 1 adet
+      salesCount: 1,
       options: [
         {
           name: "Switch Type",
@@ -568,7 +583,6 @@ async function run() {
       },
       paymentStatus: "paid",
       status: "pending",
-      totalAmount: pSonyXM5.price * 2,
       createdAt: daysAgo(1)
     },
     {
@@ -592,7 +606,6 @@ async function run() {
       },
       paymentStatus: "failed",
       status: "pending",
-      totalAmount: pGProX.price,
       createdAt: daysAgo(3)
     },
     {
@@ -616,7 +629,6 @@ async function run() {
       },
       paymentStatus: "paid",
       status: "processing",
-      totalAmount: pMxMaster3S.price * 3,
       createdAt: daysAgo(2)
     },
     {
@@ -647,11 +659,10 @@ async function run() {
         addressLine1: "789 Oxford St",
         city: "London",
         postalCode: "W1D 1AA",
-        country: "UK"
+        country: "United Kingdom"
       },
       paymentStatus: "paid",
       status: "shipped",
-      totalAmount: (pIphone15.price + 100) + (pBuds2Pro.price * 2),
       createdAt: daysAgo(10)
     },
     {
@@ -675,7 +686,6 @@ async function run() {
       },
       paymentStatus: "paid",
       status: "shipped",
-      totalAmount: pSonyWF.price * 2,
       createdAt: daysAgo(12)
     },
     {
@@ -702,7 +712,6 @@ async function run() {
       },
       paymentStatus: "refunded",
       status: "cancelled",
-      totalAmount: pHuntsman.price,
       createdAt: daysAgo(20)
     },
     {
@@ -729,7 +738,6 @@ async function run() {
       },
       paymentStatus: "paid",
       status: "delivered",
-      totalAmount: pMacbookAirM2.price + 200,
       createdAt: daysAgo(25)
     },
     {
@@ -764,7 +772,6 @@ async function run() {
       },
       paymentStatus: "paid",
       status: "delivered",
-      totalAmount: (pDellXps13.price + 500) + (pMxMaster3S.price * 2),
       createdAt: daysAgo(120)
     },
     {
@@ -788,7 +795,6 @@ async function run() {
       },
       paymentStatus: "refunded",
       status: "cancelled",
-      totalAmount: pBoseQC45.price,
       createdAt: daysAgo(90)
     },
     {
@@ -819,11 +825,10 @@ async function run() {
         addressLine1: "789 Oxford St",
         city: "London",
         postalCode: "W1D 1AA",
-        country: "UK"
+        country: "United Kingdom"
       },
       paymentStatus: "paid",
       status: "delivered",
-      totalAmount: (pKeychronK2.price + 20) + (pOdysseyG5.price * 2),
       createdAt: daysAgo(270)
     },
     {
@@ -847,7 +852,6 @@ async function run() {
       },
       paymentStatus: "paid",
       status: "processing",
-      totalAmount: pSonyWF.price,
       createdAt: daysAgo(280)
     },
     {
@@ -879,17 +883,31 @@ async function run() {
       },
       paymentStatus: "paid",
       status: "delivered",
-      totalAmount: pSteelSeries.price + pMxMaster3S.price,
       createdAt: daysAgo(300)
     }
   ];
 
   const ordersToInsert = rawOrders.map((o) => {
     const _id = new mongoose.Types.ObjectId();
+    
+    const subtotal = o.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    
+    const country = o.shippingAddress.country;
+    let shippingFee = 15;
+    if (country === "Turkey" || country === "Türkiye") {
+      shippingFee = 5;
+    } else if (["Germany", "France", "Spain", "Italy", "UK", "United Kingdom"].includes(country)) {
+      shippingFee = 10;
+    }
+
+    const tax = subtotal * 0.18;
+    const totalAmount = subtotal + shippingFee + tax;
+
     return {
       ...o,
       _id: _id,
       shortCode: _id.toString().slice(-6),
+      totalAmount: totalAmount,
       paymentInfo: {
         method: "card",
         last4: "4242"
